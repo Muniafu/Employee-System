@@ -1,160 +1,58 @@
-const path = require('path');
 const express = require('express');
-const dotenv = require('dotenv');
-const helmet = require('helmet');
+const mongoose = require('mongoose');
 const cors = require('cors');
-const morgan = require('morgan');
-const http = require('http');
-const {Server } = require('socket.io');
-const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
 
-const logger = require('./config/logger');
-const { connectDB } = require('./config/db');
-const { notFound, errorHandler } = require('./middleware/errorHandler');
-
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '.env') });
-
-const app = express();
-
-// Basic middlewares
-app.use(helmet());
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true,
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// HTTP request logging (morgan -> winston)
-app.use(
-  morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined', {
-    stream: logger.stream,
-  })
-);
-
-// Routes (ensure these files exist under backend/routes/)
+const { PORT, MONGO_URI } = require('./config/env');
 const authRoutes = require('./routes/authRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
-const departmentRoutes = require('./routes/departmentRoutes');
+const onboardingRoutes = require('./routes/onboardingRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const leaveRoutes = require('./routes/leaveRoutes');
 const payrollRoutes = require('./routes/payrollRoutes');
-const notificationRoutes = require('./routes/notificationRoutes');
+const complianceRoutes = require('./routes/complianceRoutes');
+const performanceRoutes = require('./routes/performanceRoutes');
+const learningRoutes = require('./routes/learningRoutes');
+const careerRoutes = require('./routes/careerRoutes');
+const engagementRoutes = require('./routes/engagementRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const wellnessRoutes = require('./routes/wellnessRoutes');
 
-// Mount API routes under /api
+const errorMiddleware = require('./middleware/errorMiddleware');
+
+const app = express();
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin'}
+}));
+app.use(cors());
+app.use(express.json());
+
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/employees', employeeRoutes);
-app.use('/api/departments', departmentRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/attendance', attendanceRoutes);
-app.use('/api/leaves', leaveRoutes);
+app.use('/api/leave', leaveRoutes);
 app.use('/api/payroll', payrollRoutes);
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/compliance', complianceRoutes);
+app.use('/api/performance', performanceRoutes);
+app.use('/api/learning', learningRoutes);
+app.use('/api/career', careerRoutes);
+app.use('/api/engagement', engagementRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/wellness', wellnessRoutes);
 
-// Health check / root
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok',
-    ok: true, 
-    service: 'EMS Backend', 
-    env: process.env.NODE_ENV || 'development',
-    time: new Date().toISOString(),
-  });
+// Protected route example
+const auth = require('./middleware/authMiddleware');
+const authorize = require('./middleware/roleMiddleware');
+app.get ('/api/admin/test', auth, authorize('admin'), (req, res) => {
+    res.json({ success: true, message: 'Admin access granted' });
 });
 
-// Error handling middleware (404 + centralized error handler)
-app.use(notFound);
-app.use(errorHandler);
+app.use(errorMiddleware);
 
-// Start server after DB connected
-const PORT = parseInt(process.env.PORT, 10) || 5000;
-
-async function start() {
-  try {
-    await connectDB();
-    
-    // Create HTTp server & socket.io
-    const httpServer = http.createServer(app);
-    const io = new Server(httpServer, {
-      cors: {
-        origin: '*', // tighten in production
-      },
-    });
-
-    //Socket auth
-    io.use((socket, next) => {
-      try {
-        const token = socket.handshake.auth?.token;
-        if (!token) return next(new Error('Not token provided'));
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        socket.userId = decoded.id;
-        next();
-      } catch (err) {
-        console.warn("❌ Socket auth failed:", err.message);
-        return next(new Error("Invalid or expired token"));
-      }
-    });
-
-    // Socket events
-    io.on('connection', (socket) => {
-      console.log(`🔌 User connected: ${socket.userId}`);
-
-      //Join user-specific room
-      socket.join(socket.userId);
-
-      socket.on('disconnect', () => {
-        console.log(`❌ User disconnected: ${socket.userId}`);
-      });
-    });
-
-    // Expose socket.io instance for controllers/services
-    app.set('io', io);
-
-    //Start server
-    httpServer.listen(PORT, () => {
-      logger.info(`Server running on port ${PORT} (pid: ${process.pid})`);
-      console.log(`> Backend listening on http://localhost:${PORT}`);
-    });
-
-    // Graceful shutdown handlers
-    const shutdown = (signal) => {
-      logger.info(`Received ${signal}. Closing server...`);
-      httpServer.close(async () => {
-        try {
-          // close mongoose connection if open
-          const mongoose = require('mongoose');
-          if (mongoose.connection.readyState === 1) {
-            await mongoose.connection.close(false);
-            logger.info('MongoDB connection closed');
-          }
-          process.exit(0);
-        } catch (err) {
-          logger.error('Error during shutdown', err);
-          process.exit(1);
-        }
-      });
-    };
-
-    process.on('SIGINT', () => shutdown('SIGINT'));
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-
-    // Uncaught exceptions / rejections
-    process.on('uncaughtException', (err) => {
-      logger.error('Uncaught Exception', err);
-      // give logger a moment then exit
-      setTimeout(() => process.exit(1), 100);
-    });
-
-    process.on('unhandledRejection', (reason) => {
-      logger.error('Unhandled Rejection', reason);
-      // optionally exit or keep running depending on policy
-    });
-  } catch (err) {
-    logger.error('Failed to start server', err);
-    process.exit(1);
-  }
-}
-
-start();
-
-module.exports = app;
+mongoose.connect(MONGO_URI).then(() => {
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+});
