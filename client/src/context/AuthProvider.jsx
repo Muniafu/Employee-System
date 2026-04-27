@@ -1,67 +1,64 @@
-import { useState, useEffect } from "react";
-import { login as loginApi, register as registerApi, me as meApi } from "../api/authApi";
-import { AuthContext } from "./AuthContext";
+import { useState, useEffect, useMemo } from 'react';
+import api from '../services/api';
+import { AuthContext } from './AuthContext';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem("token") || null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const initAuth = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const currentUser = await meApi();
-        setUser(currentUser);
-        localStorage.setItem("user", JSON.stringify(currentUser));
-      } catch (err) {
-        console.error("❌ Auth check failed:", err.response?.data || err.message);
-        logout(); // invalid token → nuke it
-      } finally {
-        setLoading(false);
-      }
-    };
-    initAuth();
-  }, [token]);
-
-  const login = async (usernameOrEmail, password) => {
+  const login = async (email, password) => {
     try {
-      const res = await loginApi({ usernameOrEmail, password });
-      localStorage.setItem("token", res.token);
-      localStorage.setItem("user", JSON.stringify(res.user));
-      setToken(res.token);
-      setUser(res.user);
-      return { success: true };
-    } catch (err) {
-      return { success: false, message: err.response?.data?.message || err.message };
-    }
-  };
+      const res = await api.post('/auth/login', { email, password });
 
-  const register = async (formData) => {
-    try {
-      const res = await registerApi(formData);
-      localStorage.setItem("token", res.token);
-      localStorage.setItem("user", JSON.stringify(res.user));
-      setToken(res.token);
-      setUser(res.user);
-      return { success: true };
-    } catch (err) {
-      return { success: false, message: err.response?.data?.message || err.message };
+      const { token, user } = res.data.data;
+
+      localStorage.setItem('token', token);
+      setUser(user);
+    } catch (error) {
+      throw error.response?.data?.message || 'Login failed';
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem('token');
     setUser(null);
-    setToken(null);
   };
 
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await api.get('/auth/me');
+      setUser(res.data.data);
+    } catch {
+      localStorage.removeItem('token');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    fetchCurrentUser();
+  }, []);
+
+  const value = useMemo(() => ({
+    user,
+    loading,
+    login,
+    logout,
+    isAdmin: user?.role === 'admin',
+    isEmployer: user?.role === 'employer',
+    isEmployee: user?.role === 'employee'
+  }), [user, loading]);
+
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
