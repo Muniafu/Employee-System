@@ -1,158 +1,135 @@
 const Attendance = require('../models/Attendance');
-const Employee = require('../models/Employee');
-const { sendNotification } = require('../utils/notificationService');
-const { sendEmail } = require('../utils/emailService');
-const { successResponse, errorResponse } = require('../utils/responseHandler');
+const Payroll = require('../models/Payroll');
 
-async function clockIn(req, res) {
-  try {
-    const { employeeId } = req.body;
-    if (!employeeId) return res.status(400).json({ message: 'employeeId required' });
+const normalizeDate = (date) => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+};
 
-    const emp = await Employee.findById(employeeId).populate('user');
-    if (!emp) return res.status(404).json({ message: 'Employee not found' });
+// Clock In
+exports.clockIn = async (req, res, next) => {
+    try {
+        const employeeId = req.user._id;
+        const today = normalizeDate(new Date());
 
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        // Prevent clock-in if payroll already generated for today (edge safety)
+        const payrollExists = await Payroll.findOne({
+            employee: employeeId,
+            'period.month': today.getMonth() + 1,
+            'period.year': today.getFullYear(),
+            finalized: true
+        });
 
-    let attendance = await Attendance.findOne({
-      employee: employeeId,
-      date: { $gte: start, $lte: end },
-    });
+        if (payrollExists) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Cannot clock in after payroll generation' 
+            });
+        }
 
-    if (attendance && attendance.checkIn) {
-      return res.status(400).json({ message: 'Already clocked in for today' });
+        const existing = await Attendance.findOne({
+            employee: employeeId,
+            date: today
+        });
+
+        if (existing) {
+            return res.status(400).json({
+                success: false,
+                message: 'Already clocked in for today'
+            });
+        }
+
+        const attendance = await Attendance.create({
+            employee: employeeId,
+            date: today,
+            clockIn: new Date()
+        });
+
+        res.status(201).json({
+            success: true,
+            data: attendance
+        });
+    } catch (err) {
+        next(err);
     }
+};
 
-    if (!attendance) {
-      attendance = new Attendance({
-        employee: employeeId,
-        date: now,
-        status: 'Present',
-        checkIn: now,
-      });
-    } else {
-      attendance.checkIn = now;
-      attendance.status = 'Present';
+// Clock Out
+exports.clockOut = async (req, res, next) => {
+    try {
+        const employeeId = req.user._id;
+        const today = normalizeDate(new Date());
+
+        const attendance = await Attendance.findOne({
+            employee: employeeId,
+            date: today
+        });
+
+        if (!attendance) {
+            return res.status(400).json({
+                success: false,
+                message: 'No clock-in record found for today'
+            });
+        }
+
+        if (attendance.clockOut) {
+            return res.status(400).json({
+                success: false,
+                message: 'Already clocked out for today'
+            });
+        }
+
+        attendance.clockOut = new Date();
+        await attendance.save();
+
+        res.json({
+            success: true,
+            data: attendance
+        });
+    } catch (err) {
+        next(err);
     }
+};
 
-    await attendance.save();
+// Get Own Attendance Records (Employee View)
+exports.getMyAttendance = async (req, res, next) => {
+    try {
+        const records = await Attendance.find({ employee: req.user._id }).sort({ date: -1 });
 
-    // 🔔 Fire notification
-    await sendNotification({
-      userId: emp.user,
-      title: 'Clock In Recorded',
-      message: `You clocked in at ${attendance.checkIn.toLocaleTimeString()}`,
-      type: 'attendance',
-    });
-
-    // 📧 Fire email, capture status
-    const emailResult = await sendEmail({
-      to: emp.user.email,
-      subject: 'Clock In Successful',
-      text: `Hi ${emp.firstName}, your clock-in at ${attendance.checkIn.toLocaleTimeString()} has been recorded.`,
-    });
-
-    let msg = 'Clocked in successfully';
-    if (!emailResult.success) msg += ', but email could not be sent';
-
-    return successResponse(res, attendance, msg);
-  } catch (err) {
-    console.error('Clock-in error:', err);
-    return errorResponse(res, err);
-  }
-}
-
-async function clockOut(req, res) {
-  try {
-    const { employeeId } = req.body;
-    if (!employeeId) return res.status(400).json({ message: 'employeeId required' });
-
-    const emp = await Employee.findById(employeeId).populate('user');
-    if (!emp) return res.status(404).json({ message: 'Employee not found' });
-
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-
-    const attendance = await Attendance.findOne({
-      employee: employeeId,
-      date: { $gte: start, $lte: end },
-    });
-
-    if (!attendance) {
-      return res.status(404).json({ message: 'No attendance record for today' });
+        res.json({
+            success: true,
+            data: records
+        });
+    } catch (err) {
+        next(err);
     }
+};
 
-    if (attendance.checkOut) {
-      return res.status(400).json({ message: 'Already clocked out for today' });
+// Get Attendance Records(Employer/Admin)
+exports.getAllAttendance = async (req, res, next) => {
+    try {
+        const records = await Attendance.find().populate('employee', 'name email department').sort({ date: -1 });
+
+        res.json({
+            success: true,
+            data: records
+        });
+    } catch (err) {
+        next(err);
     }
+};
 
-    attendance.checkOut = now;
-    await attendance.save();
+// Get specific employee attendance
+exports.getByEmployee = async (req, res, next) => {
+    try {
+        const records = await Attendance.find({ employee: req.params.employeeId }).sort({ date: -1 });
 
-    // 🔔 Fire notification
-    await sendNotification({
-      userId: emp.user,
-      title: 'Clock Out Recorded',
-      message: `You clocked out at ${attendance.checkOut.toLocaleTimeString()}`,
-      type: 'attendance',
-    });
-
-    // 📧 Fire email, capture status
-    const emailResult = await sendEmail({
-      to: emp.user.email,
-      subject: 'Clock Out Successful',
-      text: `Hi ${emp.firstName}, your clock-out at ${attendance.checkOut.toLocaleTimeString()} has been recorded.`,
-    });
-
-    let msg = 'Clocked out successfully';
-    if (!emailResult.success) msg += ', but email could not be sent';
-
-    return successResponse(res, attendance, msg);
-  } catch (err) {
-    console.error('Clock-out error:', err);
-    return errorResponse(res, err);
-  }
-}
-
-// Admin: view attendance of any employee
-async function getAttendanceForEmployee(req, res) {
-  try {
-    const { id } = req.params;
-    const records = await Attendance.find({ employee: id }).sort({ date: -1 });
-    return successResponse(res, records, 'Attendance fetched');
-  } catch (err) {
-    return errorResponse(res, err);
-  }
-}
-
-// Employee self-service
-async function getMyAttendance(req, res) {
-  try {
-    if (!req.user.employee) return res.status(403).json({ message: 'No employee profile linked' });
-
-    const records = await Attendance.find({ employee: req.user.employee }).sort({ date: -1 });
-    return successResponse(res, records, 'My attendance fetched');
-  } catch (err) {
-    return errorResponse(res, err);
-  }
-}
-
-async function getAllAttendance(req, res) {
-  try {
-    const records = await Attendance.find().populate('employee').sort({ date: -1 });
-    return successResponse(res, records, 'All attendance fetched');
-  } catch (err) {
-    return errorResponse(res, err);
-  }
-}
-
-module.exports = {
-  clockIn,
-  clockOut,
-  getAttendanceForEmployee,
-  getMyAttendance,
-  getAllAttendance,
+        res.json({
+            success: true,
+            data: records
+        });
+    } catch (err) {
+        next(err);
+    }
 };

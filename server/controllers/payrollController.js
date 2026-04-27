@@ -1,82 +1,165 @@
-const Payroll = require('../models/Payroll');
-const Employee = require('../models/Employee');
-const { sendNotification } = require('../utils/notificationService');
-const { sendEmail } = require('../utils/emailService');
+const Attendance = require("../models/Attendance");
+const Employee = require("../models/Employee");
+const Notification = require("../models/Notification");
+const Payroll = require("../models/Payroll");
+const Leave = require("../models/Leave");
+const { getPeriodRange, daysInMonth } = require("../utils/payrollHelper");
 
-
-// Admin-only: generate payroll for an employee for a specific month
-async function generatePayroll(req, res) {
-    try {
-        const { employeeId, month, year, baseSalary, bonuses = 0, deductions = 0 } = req.body;
-        if (!employeeId || !month || !year || !baseSalary) {
-            return res.status(400).json({ message: 'Missing required fields' });
-        }
-
-        const emp = await Employee.findById(employeeId).populate('user');
-        if (!emp) return res.status(404).json({ message: 'Employee not found' });
-
-        const netSalary = Number(baseSalary) + Number(bonuses) - Number(deductions);
-
-        const payroll = await Payroll.findOneAndUpdate(
-            { employee: employeeId, month, year },
-            { employee: employeeId, month, year, baseSalary, bonuses, deductions, netSalary, generatedAt: new Date() },
-            { new: true, upsert: true }
-        );
-
-        // 🔔 Send notification to employee
-        await sendNotification({
-            userId: emp.user,
-            title: "Payroll Generated",
-            message: `Your payroll for ${month}/${year} has been generated. Net Salary: $${netSalary}`,
-            type: "payroll"
-        });
-
-        // 📧 Send email to employee
-        await sendEmail({
-            to: emp.user.email,
-            subject: `Payroll Generated - ${month}/${year}`,
-            text: `Hi ${emp.firstName},\n\nYour payroll for ${month}/${year} has been generated.\nNet Salary: $${netSalary}.\n\nRegards,\nHR`
-        });
-
-        return res.json({ message: 'Payroll generated', payroll });
-    } catch (err) {
-        return res.status(500).json({ message: 'Server error', error: err.message });
-    }
-}
-
-// Admin: view payroll of any employee
-async function getPayrollForEmployee(req, res) {
-    try {
-        const { id } = req.params;
-        const records = await Payroll.find({ employee: id }).sort({ year: -1, month: -1 });
-        return res.json({ payrolls: records });
-    } catch (err) {
-        return res.status(500).json({ message: 'Server error', error: err.message });
-    }
-}
-
-// Admin: get all payrolls
-async function getAllPayrolls(req, res) {
+// PREVIEW PAYROLL (DERIVED, NOT SAVED)
+exports.previewPayroll = async (req, res, next) => {
   try {
-    const records = await Payroll.find({})
-      .populate('employee')
-      .sort({ year: -1, month: -1 });
-    return res.json({ payrolls: records });
-  } catch (err) {
-    return res.status(500).json({ message: 'Server error', error: err.message });
-  }
-}
+    const { employeeId, month, year } = req.body;
 
-// Employee self-service
-async function getMyPayrolls(req, res) {
+    const employee = await Employee.findById(employeeId);
+    if (!employee || employee.status !== 'active') {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found or inactive'
+      });
+    }
+
+    const existing = await Payroll.findOne({
+      employee: employeeId,
+      'period.month': month,
+      'period.year': year
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payroll already exists for this period'
+      });
+    }
+
+    const { start, end } = getPeriodRange(month, year);
+
+    // Attendance within month
+    const attendance = await Attendance.find({
+      employee: employeeId,
+      date: { $gte: start, $lte: end },
+      clockOut: { $ne: null }
+    });
+
+    const workedDays = attendance.length;
+
+    // Approved Leave within month
+    const approvedLeave = await Leave.find({
+      employee: employeeId,
+      status: 'approved',
+      startDate: { $lte: end },
+      endDate: { $gte: start }
+    });
+
+    const leaveDays = approvedLeave.reduce((sum, l) => {
+      const from = l.startDate < start ? start : l.startDate;
+      const to = l.endDate > end ? end : l.endDate;
+      return sum + Math.ceil((to - from) / (1000 * 60 * 60 * 24)) + 1;
+    }, 0);
+
+    const totalDays = daysInMonth(month, year);
+    const payableDays = Math.min(workedDays + leaveDays, totalDays);
+
+    const dailyRate = employee.salary / totalDays;
+    const grossPay = dailyRate * payableDays;
+
+    const deductions = 0;
+    const allowances = 0;
+
+    const netPay = grossPay + allowances - deductions;
+
+    res.json({
+      success: true,
+      data: {
+        employee: employee._id,
+        period: { month, year },
+        baseSalary: employee.salary,
+        workedDays,
+        leaveDays,
+        payableDays,
+        netPay
+      }
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+// FINALIZE PAYROLL (SAVE TO DB/IMMUTABEL)
+exports.finalizePayroll = async (req, res, next) => {
   try {
-    if (!req.user.employee) return res.status(403).json({ message: 'No employee profile linked' });
+    const { employeeId, month, year } = req.body;
 
-    const records = await Payroll.find({ employee: req.user.employee }).sort({ year: -1, month: -1 });
-    return res.json({ payrolls: records });
+    const existing = await Payroll.findOne({
+      employee: employeeId,
+      'period.month': month,
+      'period.year': year
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payroll already finalized'
+      });
+    }
+
+    const preview = await exports.previewPayroll(
+      req,
+      { json: (data) => data },
+      next
+    );
+
+    const payroll = await Payroll.create({
+      employee: employeeId,
+      period: { month, year },
+      baseSalary: preview.data.baseSalary,
+      deductions: 0,
+      allowances: 0,
+      netpay: preview.data.netPay,
+      generatedBy: req.user._id,
+      finalized: true
+    });
+
+    await Notification.create({
+      user: employeeId,
+      type: 'payroll',
+      message: `Payroll for ${month}/${year} finalized`
+    });
+
+    res.status(201).json({
+      success: true,
+      data: payroll
+    });
+
   } catch (err) {
-    return res.status(500).json({ message: 'Server error' });
+    next(err);
   }
-}
+};
 
-module.exports = { generatePayroll, getPayrollForEmployee, getAllPayrolls, getMyPayrolls };
+// Employee Payroll History View
+exports.getMyPayrolls = async (req, res, next) => {
+    try {
+        const payrolls = await Payroll.find({ employee: req.user._id }).sort({ 'period.year': -1, 'period.month': -1 });
+
+        res.json({
+            success: true,
+            data: payrolls
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// Admin/ Employer: View 
+exports.getAllPayrolls = async (req, res, next) => {
+    try {
+        const payrolls = await Payroll.find().populate('employee', 'name email').sort({ createdAt: -1 });
+
+        res.json({
+            success: true,
+            data: payrolls
+        });
+    } catch (err) {
+        next(err);
+    }
+};

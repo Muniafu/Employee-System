@@ -1,211 +1,114 @@
 const Employee = require('../models/Employee');
-const User = require('../models/User');
-const logger = require('../config/logger');
+const ROLES = require('../utils/roles');
 
-// Normalize employee object for client
-function normalizeEmployee(empDoc) {
-  if (!empDoc) return null;
-  const emp = empDoc.toObject ? empDoc.toObject() : empDoc;
-  return {
-    _id: emp._id,
-    firstName: emp.firstName || '',
-    lastName: emp.lastName || '',
-    name: `${emp.firstName || ''} ${emp.lastName || ''}`.trim(),
-    department: emp.department || null,
-    position: emp.position || null,
-    salary: emp.salary || null,
-    user: emp.user || null,
-    createdAt: emp.createdAt || null,
-    updatedAt: emp.updatedAt || null,
-  };
-}
+// GET ALL EMPLOYEES (Admin / Employer)
+exports.getEmployees = async (req, res) => {
+    try {
+        const employees = await Employee.find().select('-password').populate('department', 'name');
 
-// Admin creates employee
-async function createEmployee(req, res) {
-  try {
-    const { firstName, lastName, email, username, password, role, department, position, salary } = req.body;
-
-    if (!firstName || !lastName) {
-      return res.status(400).json({ success: false, message: 'firstName and lastName are required' });
+        res.json({
+            success: true,
+            data: employees
+        });
+    } catch (err) {
+        next(err);
     }
+};
 
-    let user = null;
+// GET SINGLE EMPLOYEE BY ID
+exports.getEmployeeById = async (req, res, next) => {
+    try {
+        const employee = await Employee.findById(req.params.id).select('-password').populate('department', 'name');
 
-    if (username || email || password) {
-      if (!username || !email || !password) {
-        return res.status(400).json({ success: false, message: 'username, email and password are required to create a login account' });
-      }
+        if (!employee) {
+            return res.status(404).json({
+                success: false,
+                message: 'Employee not found'
+            });
+        }
 
-      const exists = await User.findOne({ $or: [{ email }, { username }] });
-      if (exists) {
-        return res.status(409).json({ success: false, message: 'Email or username already exists' });
-      }
-
-      user = new User({ username, email, password, role: role || 'Employee' });
-      await user.save();
+        res.json({
+            success: true,
+            data: employee
+        });
+    } catch (err) {
+        next(err);
     }
+};
 
-    const emp = new Employee({
-      firstName,
-      lastName,
-      department: department || null,
-      position: position || null,
-      salary: salary || null,
-      user: user ? user._id : null,
-    });
+// GET CURRENT LOGGED-IN USER PROFILE
+exports.getMyProfile = async (req, res, next) => {
+    try {
+        const user = await Employee.findById(req.user._id).select('-password').populate('department', 'name');
 
-    await emp.save();
-
-    if (user) {
-      user.employee = emp._id;
-      await user.save();
+        res.json({
+            success: true,
+            data: user
+        });
+    } catch (err) {
+        next(err);
     }
+};
 
-    const populated = await Employee.findById(emp._id)
-      .populate('department')
-      .populate('user', 'email username role');
+// CREATE EMPLOYEE (Admin / Employee)
+exports.createEmployee = async (req, res, next) => {
+    try {
+        const employee = await Employee.create(req.body);
 
-    return res.status(201).json({
-      success: true,
-      message: 'Employee created successfully',
-      data: normalizeEmployee(populated),
-    });
-  } catch (err) {
-    if (err && err.code === 11000) {
-      logger.error('createEmployee duplicate key', err);
-      return res.status(409).json({ success: false, message: 'Duplicate key error', error: err.message });
+        res.status(201).json({
+            success: true,
+            message: 'Employee created successfully',
+            data: employee
+        });
+    } catch (err) {
+        next(err);
     }
+};
 
-    logger.error('createEmployee error', err);
-    return res.status(500).json({ success: false, message: 'Server error', error: err.message });
-  }
-}
+// UPDATE EMPLOYEE
+exports.updateEmployee = async (req, res, next) => {
+    try {
+        const employee = await Employee.findById(req.params.id);
 
-async function listEmployees(req, res) {
-  try {
-    const employees = await Employee.find()
-      .populate('department')
-      .populate('user', 'email username role')
-      .sort({ createdAt: -1 });
+        if (!employee) {
+            return res.status(404).json({
+                success: false,
+                message: 'Employee not found'
+            });
+        }
 
-    const result = employees.map(normalizeEmployee);
-    return res.json({ success: true, message: 'Employees retrieved successfully', data: result });
-  } catch (err) {
-    logger.error('listEmployees error', err);
-    return res.status(500).json({ success: false, message: 'Server error', error: err.message });
-  }
-}
+        Object.assign(employee, req.body);
+        await employee.save();
 
-async function getEmployeeById(req, res) {
-  try {
-    const { id } = req.params;
-    const emp = await Employee.findById(id)
-      .populate('department')
-      .populate('user', 'email username role');
+        res.json({
+            success: true,
+            message: 'Employee updated successfully',
+            data: employee
+        });
+    } catch (err) {
+        next(err);
+    }
+};
 
-    if (!emp) return res.status(404).json({ success: false, message: 'Employee not found' });
+// DELETE EMPLOYEE
+exports.deleteEmployee = async (req, res, next) => {
+    try {
+        const employee = await Employee.findById(req.params.id);
 
-    return res.json({ success: true, message: 'Employee retrieved successfully', data: normalizeEmployee(emp) });
-  } catch (err) {
-    logger.error('getEmployeeById error', err);
-    return res.status(500).json({ success: false, message: 'Server error', error: err.message });
-  }
-}
+        if (!employee) {
+            return res.status(404).json({
+                success: false,
+                message: 'Employee not found'
+            });
+        }
 
-async function updateEmployee(req, res) {
-  try {
-    const { id } = req.params;
-    const updates = req.body;
+        await employee.deleteOne();
 
-    const emp = await Employee.findByIdAndUpdate(id, updates, { new: true })
-      .populate('department')
-      .populate('user', 'email username role');
-
-    if (!emp) return res.status(404).json({ success: false, message: 'Employee not found' });
-
-    return res.json({ success: true, message: 'Employee updated successfully', data: normalizeEmployee(emp) });
-  } catch (err) {
-    logger.error('updateEmployee error', err);
-    return res.status(500).json({ success: false, message: 'Server error', error: err.message });
-  }
-}
-
-async function deleteEmployee(req, res) {
-  try {
-    const { id } = req.params;
-    const emp = await Employee.findByIdAndDelete(id);
-    if (!emp) return res.status(404).json({ success: false, message: 'Employee not found' });
-
-    if (emp.user) await User.findOneAndDelete({ _id: emp.user });
-
-    return res.json({ success: true, message: 'Employee and linked User deleted', data: null });
-  } catch (err) {
-    logger.error('deleteEmployee error', err);
-    return res.status(500).json({ success: false, message: 'Server error', error: err.message });
-  }
-}
-
-async function getMyProfile(req, res) {
-  try {
-    const userId = req.user && (req.user._id || req.user.id);
-    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
-
-    const user = await User.findById(userId).select('employee role');
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-    if (user.role === 'Admin') return res.status(403).json({ success: false, message: 'Admins do not have an employee profile' });
-
-    if (!user.employee) return res.status(404).json({ success: false, message: 'No employee profile linked' });
-
-    const employee = await Employee.findById(user.employee)
-      .populate('department')
-      .populate('user', 'email username role');
-
-    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
-
-    return res.json({ success: true, message: 'Profile retrieved successfully', data: normalizeEmployee(employee) });
-  } catch (err) {
-    logger.error('getMyProfile error', err);
-    return res.status(500).json({ success: false, message: 'Server error', error: err.message });
-  }
-}
-
-async function updateMyProfile(req, res) {
-  try {
-    const userId = req.user && (req.user._id || req.user.id);
-    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
-
-    const user = await User.findById(userId).select('employee role');
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-    if (user.role === 'Admin') return res.status(403).json({ success: false, message: 'Admins cannot update employee profiles here' });
-
-    if (!user.employee) return res.status(404).json({ success: false, message: 'No employee profile linked' });
-
-    const updates = req.body || {};
-    const allowed = ['firstName', 'lastName', 'department', 'position', 'salary', 'phone', 'address'];
-    const payload = {};
-    allowed.forEach((k) => { if (typeof updates[k] !== 'undefined') payload[k] = updates[k]; });
-
-    const updated = await Employee.findByIdAndUpdate(user.employee, payload, { new: true })
-      .populate('department')
-      .populate('user', 'email username role');
-
-    if (!updated) return res.status(404).json({ success: false, message: 'Employee not found' });
-
-    return res.json({ success: true, message: 'Profile updated successfully', data: normalizeEmployee(updated) });
-  } catch (err) {
-    logger.error('updateMyProfile error', err);
-    return res.status(500).json({ success: false, message: 'Server error', error: err.message });
-  }
-}
-
-module.exports = {
-  createEmployee,
-  listEmployees,
-  getEmployeeById,
-  updateEmployee,
-  deleteEmployee,
-  getMyProfile,
-  updateMyProfile,
+        res.json({
+            success: true,
+            message: 'Employee deleted successfully'
+        });
+    } catch (err) {
+        next(err);
+    }
 };
