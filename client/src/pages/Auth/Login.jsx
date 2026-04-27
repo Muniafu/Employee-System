@@ -1,120 +1,62 @@
-import { useState, useContext } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { AuthContext } from "../../context/AuthContext";
+import { useState, useContext } from 'react';
+import { AuthContext } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import FormInput from '../../components/FormInput';
 
-export default function Login() {
-  const navigate = useNavigate();
-  const { login } = useContext(AuthContext);
+const Login = () => {
+    const { login } = useContext(AuthContext);
+    const navigate = useNavigate();
 
-  const [form, setForm] = useState({ usernameOrEmail: "", password: "" });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+    const [form, setForm] = useState({
+        email: '',
+        password: ''
+    });
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            setLoading(true);
+            await login(form.email, form.password);
+            navigate('/dashboard');
+        } catch (err) {
+            setError(
+                err.response?.data?.message || 'Invalid credentials'
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    try {
-      const res = await login(form.usernameOrEmail, form.password);
-      if (res.success) {
-        const user = JSON.parse(localStorage.getItem("user"));
-        navigate(user.role === "Admin" ? "/admin/dashboard" : "/employee/profile");
-      } else {
-        setError(res.message || "Login failed");
-      }
-    } catch (err) {
-      setError(err.message || "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  };
+    return (
+        <div className="auth-container">
+            <h2>Login</h2>
 
-  return (
-    <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
-      <div className="card shadow-lg border-0" style={{ maxWidth: "420px", width: "100%" }}>
-        <div className="card-body p-4">
-          <h2 className="card-title text-center mb-4 fw-bold text-primary">
-            Welcome Back 👋
-          </h2>
+            <form onSubmit={handleSubmit}>
+                <FormInput
+                    label="Email"
+                    type="email"
+                    value={form.email}
+                    onChange={(v) => setForm({...form, email: v})}
+                />
 
-          {error && (
-            <div className="alert alert-danger small text-center" role="alert">
-              {error}
-            </div>
-          )}
+                <FormInput
+                    label="Password"
+                    type="password"
+                    value={form.password}
+                    onChange={(v) => setForm({...form, password: v})}
+                />
 
-          <form onSubmit={handleSubmit}>
-            {/* Username / Email */}
-            <div className="mb-3">
-              <label htmlFor="usernameOrEmail" className="form-label fw-semibold">
-                Email or Username
-              </label>
-              <input
-                type="text"
-                id="usernameOrEmail"
-                name="usernameOrEmail"
-                value={form.usernameOrEmail}
-                onChange={handleChange}
-                placeholder="Enter your email or username"
-                className="form-control"
-                required
-              />
-            </div>
+                {error && <p className="error">{error}</p>}
 
-            {/* Password */}
-            <div className="mb-3">
-              <label htmlFor="password" className="form-label fw-semibold">
-                Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="Enter your password"
-                className="form-control"
-                required
-              />
-            </div>
-
-            {/* Submit Button */}
-            <div className="d-grid mb-3">
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn btn-primary btn-lg fw-semibold"
-                aria-busy={loading}
-              >
-                {loading ? (
-                  <>
-                    <span
-                      className="spinner-border spinner-border-sm me-2"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
-                    Logging in...
-                  </>
-                ) : (
-                  "Login"
-                )}
-              </button>
-            </div>
-          </form>
-
-          <p className="text-center mt-3 text-muted">
-            Don’t have an account?{" "}
-            <Link to="/register" className="fw-semibold text-decoration-none text-success">
-              Register
-            </Link>
-          </p>
+                <button type="submit" disabled={loading}>
+                    {loading ? 'Logging in...' : 'Login'}
+                </button>
+            </form>
         </div>
-      </div>
-    </div>
-  );
-}
+    );
+};
+
+export default Login;
