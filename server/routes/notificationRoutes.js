@@ -1,14 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const notificationController = require('../controllers/notificationController');
-const { protect, adminOnly } = require('../middleware/authMiddleware');
+const auth = require('../middleware/authMiddleware');
+const { getMyNotifications, markAsRead } = require('../controllers/notificationController');
 
-// Employee self-service
-router.get('/me', protect, notificationController.getMyNotifications);
-router.put('/:id/read', protect, notificationController.markAsRead);
-
-// Admin-only: broadcast or create targeted notifications
-router.post('/', protect, adminOnly, notificationController.createNotification);
-router.get('/', protect, adminOnly, notificationController.listNotifications);
+// @route   GET /api/notifications/me
+// @desc    Get my notifications
+// @access  Private
+router.get('/me', auth, getMyNotifications);
+router.patch('/:id/read', auth, markAsRead);
 
 module.exports = router;

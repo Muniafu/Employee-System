@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const payrollController = require('../controllers/payrollController');
-const { protect, adminOnly } = require('../middleware/authMiddleware');
 
-// Employee self-service
-router.get('/me', protect, payrollController.getMyPayrolls);
+const auth = require('../middleware/authMiddleware');
+const authorize = require('../middleware/roleMiddleware');
+const { previewPayroll, finalizePayroll, getMyPayrolls, getAllPayrolls } = require('../controllers/payrollController');
 
-// Admin-only
-router.post('/', protect, adminOnly, payrollController.generatePayroll);
-router.get('/', protect, adminOnly, payrollController.getAllPayrolls);
-router.get('/:id', protect, adminOnly, payrollController.getPayrollForEmployee);
+router.post('/preview', auth, authorize('employer', 'admin'), previewPayroll);
+router.post('/finalize', auth, authorize('employer', 'admin'), finalizePayroll);
+
+router.get('/me', auth, authorize('employee'), getMyPayrolls);
+router.get('/', auth, authorize('admin', 'employer'), getAllPayrolls);
 
 module.exports = router;

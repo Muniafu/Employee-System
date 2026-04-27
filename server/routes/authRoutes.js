@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const authController = require('../controllers/authController');
-const { protect } = require('../middleware/authMiddleware');
+const { login } = require('../controllers/authController');
 
-router.post('/register', authController.register);
-router.post('/login', authController.login);
-router.get('/me', protect, authController.getProfile);
+// @route   POST /api/auth/login
+// @desc    Login user and return JWT token
+// @access  Public
+router.post('/login', login);
 
 module.exports = router;

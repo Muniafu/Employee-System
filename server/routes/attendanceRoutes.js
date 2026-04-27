@@ -1,15 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const attendanceController = require('../controllers/attendanceController');
-const { protect,adminOnly } = require('../middleware/authMiddleware');
 
-// Employee self-service routes
-router.post('/clock-in', protect, attendanceController.clockIn);
-router.post('/clock-out', protect, attendanceController.clockOut);
-router.get('/me', protect, attendanceController.getMyAttendance)
+const auth = require('../middleware/authMiddleware');
+const authorize = require('../middleware/roleMiddleware');
+const { clockIn, clockOut, getMyAttendance, getAllAttendance, getByEmployee } = require('../controllers/attendanceController');
 
-// Admin: view attendance of any employee
-router.get('/', protect, adminOnly, attendanceController.getAllAttendance);
-router.get('/:id', protect, adminOnly, attendanceController.getAttendanceForEmployee);
+router.post('/clock-in', auth, authorize('employee'), clockIn);
+router.post('/clock-out', auth, authorize('employee'), clockOut);
+router.get('/me', auth, authorize('employee'), getMyAttendance);
+router.get('/employee/:employeeId', auth, authorize('admin', 'employer'), getByEmployee);
+router.get('/', auth, authorize('admin', 'employer'), getAllAttendance);
 
 module.exports = router;

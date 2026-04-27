@@ -1,15 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const leaveController = require('../controllers/leaveController');
-const { protect, adminOnly } = require('../middleware/authMiddleware');
 
-// Employee self-service
-router.post('/', protect, leaveController.requestLeave);
-router.get('/me', protect, leaveController.getMyLeaves);
+const auth = require('../middleware/authMiddleware');
+const authorize = require('../middleware/roleMiddleware');
 
-// Admin-only
-router.get('/', protect, adminOnly, leaveController.getLeaves);
-router.put('/:id/approve', protect, adminOnly, leaveController.approveLeave);
-router.put('/:id/reject', protect, adminOnly, leaveController.rejectLeave);
+const {
+  requestLeave,
+  getMyLeaves,
+  getAllLeaves,
+  approveLeave,
+  rejectLeave
+} = require('../controllers/leaveController');
+
+// Employee routes
+router.post('/', auth, authorize('employee'), requestLeave);
+router.get('/me', auth, authorize('employee'), getMyLeaves);
+
+// Admin/Employer routes
+router.get('/', auth, authorize('admin', 'employer'), getAllLeaves);
+router.patch('/:id/approve', auth, authorize('admin', 'employer'), approveLeave);
+router.patch('/:id/reject', auth, authorize('admin', 'employer'), rejectLeave);
 
 module.exports = router;
