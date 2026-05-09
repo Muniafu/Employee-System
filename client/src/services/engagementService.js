@@ -1,14 +1,7 @@
 import api from './api';
 
-const engagementService = {
-  getSurveys: () =>
-    api.get('/engagement'),
-
-  submitSurvey: (data) =>
-    api.post('/engagement', data), // { surveyId, answers }
-
-  getResults: () =>
-    api.get('/engagement/results')
-};
-
-export default engagementService;
+export const createSurvey = (d) => api.post('/engagement', d);
+export const getSurveys = (P) => api.get('/engagement', { params: P });
+export const getSurvey = (id) => api.get(`/engagement/${id}`);
+export const submitResponse = (id, d) => api.post(`/engagement/${id}/submit`, d);
+export const getResults = (id) => api.get(`/engagement/${id}/results`);

@@ -1,17 +1,8 @@
 import api from './api';
 
-const learningService = {
-  getAllModules: () =>
-    api.get('/learning'),
-
-  enroll: (moduleId) =>
-    api.post(`/learning/${moduleId}/enroll`),
-
-  getMyModules: () =>
-    api.get('/learning/me'),
-
-  updateProgress: (moduleId, progress) =>
-    api.patch(`/learning/${moduleId}/progress`, { progress }),
-};
-
-export default learningService;
+export const getCourses = (p) => api.get('/learning', { params: p });
+export const getCourse = (id) => api.get(`/learning/${id}`);
+export const createCourse = (d) => api.post('/learning', d);
+export const enroll = (id) => api.post(`/learning/${id}/enroll`);
+export const updateProgress = (id, d) => api.patch(`/learning/${id}/progress`, d);
+export const getMyCourses = () => api.get('/learning/my-courses');

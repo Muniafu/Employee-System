@@ -1,20 +1,8 @@
 import api from './api';
 
-const performanceService = {
-  getAll: () =>
-    api.get('/performance'),
-
-  getMy: () =>
-    api.get('/performance/me'),
-
-  getByEmployee: (employeeId) =>
-    api.get(`/performance/employee/${employeeId}`),
-
-  createReview: (data) =>
-    api.post('/performance', data),
-
-  updateReview: (id, data) =>
-    api.put(`/performance/${id}`, data)
-};
-
-export default performanceService;
+export const createReview = (d) => api.post('/performance', d);
+export const getReviews = (P) => api.get('/performance', { params: P });
+export const getReview = (id) => api.get(`/performance/${id}`);
+export const submitReview = (id, d) => api.patch(`/performance/${id}/submit`, d);
+export const reviewEmployee = (id, d) => api.patch(`/performance/${id}/review`, d);
+export const updateGoals = (id, d) => api.put(`/performance/${id}/goals`, d);

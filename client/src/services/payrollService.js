@@ -1,20 +1,7 @@
 import api from './api';
 
-const payrollService = {
-  preview: (data) =>
-    api.post('/payroll/preview', data),
-
-  finalize: (data) =>
-    api.post('/payroll/finalize', data),
-
-  getAll: (params) =>
-    api.get('/payroll', { params }),
-
-  getMyPayroll: () =>
-    api.get('/payroll/me'),
-
-  getByEmployee: (employeeId) =>
-    api.get(`/payroll/employee/${employeeId}`)
-};
-
-export default payrollService;
+export const previewPayroll = (d) => api.post('/payroll/preview', d);
+export const finalizePayroll = (d) => api.post('/payroll/finalize', d);
+export const getMyPayroll = () => api.get('/payroll/me');
+export const getAllPayroll = (P) => api.get('/payroll/all', { params: P });
+export const getPayroll = (id) => api.get(`/payroll/${id}`);
