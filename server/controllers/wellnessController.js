@@ -1,121 +1,66 @@
 const Wellness = require('../models/Wellness');
+const Employee = require('../models/Employee');
 
-// ==========================
-// Admin: Create Program
-// ==========================
-exports.createProgram = async (req, res, next) => {
+exports.create = async (req, res, next) => {
   try {
-    const program = await Wellness.create({
-      ...req.body,
-      organizationId: req.user.organizationId
-    });
-
+    const program = await Wellness.create({ ...req.body, createdBy: req.user._id });
     res.status(201).json({ success: true, data: program });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
-// ==========================
-// Employee: Get Programs
-// ==========================
-exports.getPrograms = async (req, res, next) => {
+exports.getAll = async (req, res, next) => {
   try {
-    const programs = await Wellness.find({
-      organizationId: req.user.organizationId,
-      active: true
-    }).select('title description type');
-
-    res.json({ success: true, data: programs });
-  } catch (err) {
-    next(err);
-  }
+    const filter = { isActive: true };
+    if (req.query.category) filter.category = req.query.category;
+    if (req.query.type) filter.type = req.query.type;
+    const programs = await Wellness.find(filter).sort({ createdAt: -1 });
+    res.status(200).json({ success: true, count: programs.length, data: programs });
+  } catch (err) { next(err); }
 };
 
-// ==========================
-// Employee: Enroll
-// ==========================
+exports.getOne = async (req, res, next) => {
+  try {
+    const program = await Wellness.findById(req.params.id);
+    if (!program) return res.status(404).json({ success: false, message: 'Wellness program not found.' });
+    res.status(200).json({ success: true, data: program });
+  } catch (err) { next(err); }
+};
+
 exports.enroll = async (req, res, next) => {
   try {
-    const { programId } = req.params;
+    const program = await Wellness.findById(req.params.id);
+    if (!program) return res.status(404).json({ success: false, message: 'Program not found.' });
+    if (!program.isActive) return res.status(400).json({ success: false, message: 'Program is not active.' });
 
-    const program = await Wellness.findOne({
-      _id: programId,
-      organizationId: req.user.organizationId,
-      active: true
-    });
+    const employee = await Employee.findOne({ user: req.user._id });
+    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found.' });
 
-    if (!program) {
-      return res.status(404).json({
-        success: false,
-        message: 'Program not found'
-      });
+    const already = program.enrollments.find(e => e.employee?.toString() === employee._id.toString());
+    if (already) return res.status(409).json({ success: false, message: 'Already enrolled.' });
+
+    if (program.enrollments.length >= program.maxCapacity) {
+      return res.status(400).json({ success: false, message: 'Program is at full capacity.' });
     }
 
-    const already = program.participants.find(
-      p => p.employee.toString() === req.user._id.toString()
-    );
-
-    if (already) {
-      return res.status(400).json({
-        success: false,
-        message: 'Already enrolled'
-      });
-    }
-
-    program.participants.push({
-      employee: req.user._id
-    });
-
+    program.enrollments.push({ employee: employee._id });
     await program.save();
-
-    res.json({
-      success: true,
-      message: 'Enrolled successfully'
-    });
-
-  } catch (err) {
-    next(err);
-  }
+    res.status(200).json({ success: true, message: 'Enrolled in wellness program.', data: program });
+  } catch (err) { next(err); }
 };
 
-// ==========================
-// Employee: My Programs
-// ==========================
-exports.getMyPrograms = async (req, res, next) => {
+exports.complete = async (req, res, next) => {
   try {
-    const programs = await Wellness.find({
-      organizationId: req.user.organizationId,
-      'participants.employee': req.user._id
-    }).select('title type participants');
+    const program = await Wellness.findById(req.params.id);
+    if (!program) return res.status(404).json({ success: false, message: 'Program not found.' });
 
-    const filtered = programs.map(p => ({
-      _id: p._id,
-      title: p.title,
-      type: p.type,
-      status: p.participants.find(
-        part => part.employee.toString() === req.user._id.toString()
-      )?.status
-    }));
+    const employee = await Employee.findOne({ user: req.user._id });
+    const enrollment = program.enrollments.find(e => e.employee?.toString() === employee?._id.toString());
+    if (!enrollment) return res.status(400).json({ success: false, message: 'Not enrolled.' });
 
-    res.json({ success: true, data: filtered });
-
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ==========================
-// Admin: View Participation
-// ==========================
-exports.getAllPrograms = async (req, res, next) => {
-  try {
-    const programs = await Wellness.find({
-      organizationId: req.user.organizationId
-    }).populate('participants.employee', 'name email');
-
-    res.json({ success: true, data: programs });
-  } catch (err) {
-    next(err);
-  }
+    enrollment.status = 'completed';
+    enrollment.completedAt = new Date();
+    enrollment.feedback = req.body.feedback || '';
+    await program.save();
+    res.status(200).json({ success: true, message: 'Program completed.', data: enrollment });
+  } catch (err) { next(err); }
 };

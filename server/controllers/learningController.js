@@ -1,140 +1,83 @@
 const Learning = require('../models/Learning');
+const Employee = require('../models/Employee');
 
-// ===========================
-// Create Module (Admin)
-// ===========================
-exports.createModule = async (req, res, next) => {
+exports.create = async (req, res, next) => {
   try {
-    const module = await Learning.create({
-      ...req.body,
-      organizationId: req.user.organizationId
-    });
-
-    res.status(201).json({
-      success: true,
-      data: module
-    });
-
-  } catch (err) {
-    next(err);
-  }
+    const course = await Learning.create({ ...req.body, createdBy: req.user._id });
+    res.status(201).json({ success: true, data: course });
+  } catch (err) { next(err); }
 };
 
-// ===========================
-// Get All Modules (Org)
-// ===========================
-exports.getAllModules = async (req, res, next) => {
+exports.getAll = async (req, res, next) => {
   try {
-    const modules = await Learning.find({
-      organizationId: req.user.organizationId
-    });
-
-    res.json({
-      success: true,
-      data: modules
-    });
-
-  } catch (err) {
-    next(err);
-  }
+    const filter = { isActive: true };
+    if (req.query.category) filter.category = req.query.category;
+    if (req.query.mandatory) filter.isMandatory = req.query.mandatory === 'true';
+    const courses = await Learning.find(filter).populate('createdBy', 'firstName lastName').sort({ createdAt: -1 });
+    res.status(200).json({ success: true, count: courses.length, data: courses });
+  } catch (err) { next(err); }
 };
 
-// ===========================
-// Enroll Employee
-// ===========================
+exports.getOne = async (req, res, next) => {
+  try {
+    const course = await Learning.findById(req.params.id).populate('createdBy', 'firstName lastName');
+    if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
+    res.status(200).json({ success: true, data: course });
+  } catch (err) { next(err); }
+};
+
 exports.enroll = async (req, res, next) => {
   try {
-    const module = await Learning.findOne({
-      _id: req.params.moduleId,
-      organizationId: req.user.organizationId
-    });
+    const course = await Learning.findById(req.params.id);
+    if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
 
-    if (!module)
-      return res.status(404).json({ success: false, message: 'Module not found' });
+    const employee = await Employee.findOne({ user: req.user._id });
+    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found.' });
 
-    const alreadyEnrolled = module.enrollments.find(
-      e => e.employee.toString() === req.user._id.toString()
-    );
+    const already = course.enrollments.find(e => e.employee?.toString() === employee._id.toString());
+    if (already) return res.status(409).json({ success: false, message: 'Already enrolled in this course.' });
 
-    if (alreadyEnrolled)
-      return res.status(400).json({
-        success: false,
-        message: 'Already enrolled'
-      });
-
-    module.enrollments.push({
-      employee: req.user._id
-    });
-
-    await module.save();
-
-    res.json({
-      success: true,
-      message: 'Enrolled successfully'
-    });
-
-  } catch (err) {
-    next(err);
-  }
+    course.enrollments.push({ employee: employee._id, status: 'enrolled' });
+    await course.save();
+    res.status(200).json({ success: true, message: 'Enrolled successfully.', data: course });
+  } catch (err) { next(err); }
 };
 
-// ===========================
-// Update Progress
-// ===========================
 exports.updateProgress = async (req, res, next) => {
   try {
-    const { progress } = req.body;
+    const course = await Learning.findById(req.params.id);
+    if (!course) return res.status(404).json({ success: false, message: 'Course not found.' });
 
-    const module = await Learning.findOne({
-      _id: req.params.moduleId,
-      organizationId: req.user.organizationId
-    });
+    const employee = await Employee.findOne({ user: req.user._id });
+    const enrollment = course.enrollments.find(e => e.employee?.toString() === employee?._id.toString());
+    if (!enrollment) return res.status(400).json({ success: false, message: 'Not enrolled in this course.' });
 
-    const enrollment = module.enrollments.find(
-      e => e.employee.toString() === req.user._id.toString()
-    );
-
-    if (!enrollment)
-      return res.status(404).json({
-        success: false,
-        message: 'Not enrolled'
-      });
-
-    enrollment.progress = progress;
-    enrollment.status =
-      progress === 100 ? 'completed' : 'in-progress';
-
-    if (progress === 100)
+    enrollment.progress = req.body.progress;
+    if (req.body.progress >= 100) {
+      enrollment.status = 'completed';
       enrollment.completedAt = new Date();
-
-    await module.save();
-
-    res.json({
-      success: true,
-      data: enrollment
-    });
-
-  } catch (err) {
-    next(err);
-  }
+      enrollment.score = req.body.score || course.passingScore;
+      if ((req.body.score || course.passingScore) >= course.passingScore) {
+        enrollment.certificate = `CERT-${course._id}-${employee._id}-${Date.now()}`;
+      }
+    } else {
+      enrollment.status = 'in_progress';
+    }
+    await course.save();
+    res.status(200).json({ success: true, data: enrollment });
+  } catch (err) { next(err); }
 };
 
-// ===========================
-// Get My Modules
-// ===========================
-exports.getMyModules = async (req, res, next) => {
+exports.getMyCourses = async (req, res, next) => {
   try {
-    const modules = await Learning.find({
-      organizationId: req.user.organizationId,
-      'enrollments.employee': req.user._id
-    });
+    const employee = await Employee.findOne({ user: req.user._id });
+    if (!employee) return res.status(404).json({ success: false, message: 'Employee not found.' });
 
-    res.json({
-      success: true,
-      data: modules
+    const courses = await Learning.find({ 'enrollments.employee': employee._id });
+    const withStatus = courses.map(c => {
+      const enrollment = c.enrollments.find(e => e.employee?.toString() === employee._id.toString());
+      return { ...c.toObject(), myEnrollment: enrollment };
     });
-
-  } catch (err) {
-    next(err);
-  }
+    res.status(200).json({ success: true, count: withStatus.length, data: withStatus });
+  } catch (err) { next(err); }
 };

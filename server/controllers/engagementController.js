@@ -1,127 +1,67 @@
 const Engagement = require('../models/Engagement');
+const Employee = require('../models/Employee');
 
-// ===========================
-// Admin: Create Survey
-// ===========================
-exports.createSurvey = async (req, res, next) => {
+exports.create = async (req, res, next) => {
   try {
-    const survey = await Engagement.create({
-      ...req.body,
-      organizationId: req.user.organizationId
-    });
-
+    const survey = await Engagement.create({ ...req.body, createdBy: req.user._id });
     res.status(201).json({ success: true, data: survey });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
-// ===========================
-// Get Active Surveys (Employee)
-// ===========================
-exports.getSurveys = async (req, res, next) => {
+exports.getAll = async (req, res, next) => {
   try {
-    const surveys = await Engagement.find({
-      organizationId: req.user.organizationId,
-      active: true
-    }).select('title description questions');
-
-    res.json({ success: true, data: surveys });
-  } catch (err) {
-    next(err);
-  }
+    const filter = {};
+    if (req.query.type) filter.type = req.query.type;
+    if (req.query.active) filter.isActive = req.query.active === 'true';
+    const surveys = await Engagement.find(filter).populate('createdBy', 'firstName lastName').sort({ createdAt: -1 });
+    res.status(200).json({ success: true, count: surveys.length, data: surveys });
+  } catch (err) { next(err); }
 };
 
-// ===========================
-// Submit Survey (Employee)
-// ===========================
-exports.submitSurvey = async (req, res, next) => {
+exports.getOne = async (req, res, next) => {
   try {
-    const { surveyId, answers } = req.body;
+    const survey = await Engagement.findById(req.params.id);
+    if (!survey) return res.status(404).json({ success: false, message: 'Survey not found.' });
+    res.status(200).json({ success: true, data: survey });
+  } catch (err) { next(err); }
+};
 
-    const survey = await Engagement.findOne({
-      _id: surveyId,
-      organizationId: req.user.organizationId,
-      active: true
-    });
+exports.submit = async (req, res, next) => {
+  try {
+    const survey = await Engagement.findById(req.params.id);
+    if (!survey) return res.status(404).json({ success: false, message: 'Survey not found.' });
+    if (!survey.isActive) return res.status(400).json({ success: false, message: 'Survey is no longer active.' });
 
-    if (!survey) {
-      return res.status(404).json({
-        success: false,
-        message: 'Survey not found'
-      });
-    }
+    const employee = await Employee.findOne({ user: req.user._id });
+    const alreadySubmitted = survey.responses.find(r => r.employee?.toString() === employee?._id.toString() && !survey.anonymous);
+    if (alreadySubmitted) return res.status(409).json({ success: false, message: 'Already submitted response to this survey.' });
 
-    const alreadySubmitted = survey.responses.find(
-      r => r.employee.toString() === req.user._id.toString()
-    );
+    const { answers, npsScore, anonymous } = req.body;
+    survey.responses.push({ employee: anonymous ? null : employee?._id, answers: answers || [], npsScore, anonymous: !!anonymous });
 
-    if (alreadySubmitted) {
-      return res.status(400).json({
-        success: false,
-        message: 'Already submitted'
-      });
-    }
-
-    survey.responses.push({
-      employee: req.user._id,
-      answers
-    });
+    // Recalculate avg NPS
+    const npsResponses = survey.responses.filter(r => r.npsScore !== undefined);
+    survey.avgNps = npsResponses.length ? (npsResponses.reduce((s, r) => s + r.npsScore, 0) / npsResponses.length) : 0;
 
     await survey.save();
-
-    res.json({
-      success: true,
-      message: 'Survey submitted'
-    });
-
-  } catch (err) {
-    next(err);
-  }
+    res.status(200).json({ success: true, message: 'Response submitted.', data: { responseCount: survey.responses.length } });
+  } catch (err) { next(err); }
 };
 
-// ===========================
-// Admin: Get Results
-// ===========================
 exports.getResults = async (req, res, next) => {
   try {
-    const surveys = await Engagement.find({
-      organizationId: req.user.organizationId
+    const survey = await Engagement.findById(req.params.id);
+    if (!survey) return res.status(404).json({ success: false, message: 'Survey not found.' });
+
+    const total = survey.responses.length;
+    const avgNps = survey.avgNps;
+    const ratingsByQuestion = {};
+
+    survey.questions.forEach((q, i) => {
+      const ratings = survey.responses.map(r => r.answers?.[i]?.rating).filter(Boolean);
+      ratingsByQuestion[q.text] = ratings.length ? (ratings.reduce((s, n) => s + n, 0) / ratings.length).toFixed(2) : null;
     });
 
-    const results = surveys.map(s => {
-      const summary = {};
-
-      s.questions.forEach(q => {
-        if (q.type === 'scale') {
-          const values = s.responses.flatMap(r =>
-            r.answers
-              .filter(a => a.questionId === q.id)
-              .map(a => a.value)
-          );
-
-          const avg = values.length
-            ? values.reduce((a, b) => a + b, 0) / values.length
-            : 0;
-
-          summary[q.id] = {
-            question: q.text,
-            average: avg,
-            responses: values.length
-          };
-        }
-      });
-
-      return {
-        surveyId: s._id,
-        title: s.title,
-        summary
-      };
-    });
-
-    res.json({ success: true, data: results });
-
-  } catch (err) {
-    next(err);
-  }
+    res.status(200).json({ success: true, data: { title: survey.title, total, avgNps, ratingsByQuestion } });
+  } catch (err) { next(err); }
 };
