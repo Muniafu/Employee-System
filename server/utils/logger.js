@@ -1,14 +1,22 @@
-const fs = require('fs');
-const path = require('path');
+const { createLogger, format, transports } = require('winston');
+const { NODE_ENV } = require('../config/env');
 
-const logFile = path.join(__dirname, '../../logs/system.log');
+const logger = createLogger({
+  level: NODE_ENV === 'production' ? 'warn' : 'debug',
+  format: format.combine(
+    format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    format.errors({ stack: true }),
+    format.printf(({ level, message, timestamp, stack }) =>
+      stack
+        ? `[${timestamp}] ${level.toUpperCase()}: ${message}\n${stack}`
+        : `[${timestamp}] ${level.toUpperCase()}: ${message}`
+    )
+  ),
+  transports: [
+    new transports.Console({
+      format: format.combine(format.colorize(), format.simple()),
+    }),
+  ],
+});
 
-exports.error = (message, meta = {}) => {
-    const log = `[${new Date().toISOString()}] ERROR: ${message} ${JSON.stringify(meta)}\n`;
-    fs.appendFileSync(logFile, log);
-};
-
-exports.info = (message, meta = {}) => {
-    const log = `[${new Date().toISOString()}] INFO: ${message} ${JSON.stringify(meta)}\n`;
-    fs.appendFileSync(logFile, log);
-};
+module.exports = logger;

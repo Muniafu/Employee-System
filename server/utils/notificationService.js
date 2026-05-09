@@ -1,27 +1,28 @@
 const Notification = require('../models/Notification');
-const Employee = require('../models/Employee');
-const { sendEmail } = require('./emailService');
+const logger = require('./logger');
 
-// Create and send notification
-exports.notifyUser = async (userId, type, message, emailSubject) => {
-    // 1. Always create in-app notification
-    await Notification.create({
-        user: userId,
-        type,
-        message,
-    });
-
-    // 2. Send email notification if emailSubject is provided (asnyc, best-effort)
-    try {
-        const user = await Employee.findById(userId);
-        if (!user?.email) return;
-
-        sendEmail({
-            to: user.email,
-            subject: emailSubject || 'Notification from HR Management System',
-            text: message
-        });
-    } catch (err) {
-        // silently fail email sending errors
-    }
+const createNotification = async ({ recipient, type, title, message, data = {}, link = '', priority = 'medium' }) => {
+  try {
+    const notification = await Notification.create({ recipient, type, title, message, data, link, priority });
+    return notification;
+  } catch (err) {
+    logger.error(`Notification creation failed: ${err.message}`);
+    return null; // Non-blocking
+  }
 };
+
+const markRead = async (notificationId, userId) => {
+  return Notification.findOneAndUpdate(
+    { _id: notificationId, recipient: userId },
+    { read: true, readAt: new Date() },
+    { new: true }
+  );
+};
+
+const getUserNotifications = async (userId, unreadOnly = false) => {
+  const filter = { recipient: userId };
+  if (unreadOnly) filter.read = false;
+  return Notification.find(filter).sort({ createdAt: -1 }).limit(50);
+};
+
+module.exports = { createNotification, markRead, getUserNotifications };
