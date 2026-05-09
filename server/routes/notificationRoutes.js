@@ -5,8 +5,13 @@ const auth = require('../middleware/authMiddleware');
 router.use(auth);
 
 router.get('/', c.getAll);
+
+router.get('/unread-count', c.getUnreadCount);
+
 router.patch('/read-all', c.markAllRead);
+
 router.patch('/:id/read', c.markAsRead);
+
 router.delete('/:id', c.remove);
 
 module.exports = router;

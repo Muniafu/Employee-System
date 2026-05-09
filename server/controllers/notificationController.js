@@ -11,6 +11,25 @@ exports.getAll = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// GET /api/notifications/unread-count
+exports.getUnreadCount = async (req, res, next) => {
+  try {
+    const count = await Notification.countDocuments({
+      recipient: req.user._id,
+      read: false,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        count,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // PATCH /api/notifications/:id/read
 exports.markAsRead = async (req, res, next) => {
   try {
