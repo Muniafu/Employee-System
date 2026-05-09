@@ -1,14 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-
-import App from './App';
-
-import { AuthProvider } from './context/AuthProvider';
-import { EmployeeProvider } from './context/EmployeeContext';
-import { ThemeProvider } from './context/ThemeContext';
-
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './styles/global.css';
+import App from './App.jsx';
+import AuthProvider from './context/AuthProvider.jsx';
+import ThemeProvider from './context/ThemeProvider.jsx';
+import EmployeeProvider from './context/EmployeeProvider.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -17,6 +16,15 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <AuthProvider>
           <EmployeeProvider>
             <App />
+            <ToastContainer
+              position="top-right"
+              autoClose={3500}
+              hideProgressBar={false}
+              newestOnTop
+              closeOnClick
+              pauseOnHover
+              theme="light"
+            />
           </EmployeeProvider>
         </AuthProvider>
       </ThemeProvider>

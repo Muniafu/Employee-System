@@ -1,246 +1,91 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useContext } from 'react';
-import { AuthContext } from './context/AuthContext';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { useAuth } from './context/useAuth.js';
 
-import Navbar from './components/Navbar';
-import Sidebar from './components/Sidebar';
+// Layout
+import Sidebar from './components/Sidebar.jsx';
+import Navbar  from './components/Navbar.jsx';
+
+// Auth
+import Login from './pages/Auth/Login.jsx';
 
 // Pages
-import Login from './pages/Auth/Login';
-import EmployeeList from './pages/Employee/EmployeeList';
-import EmployeeProfile from './pages/Employee/EmployeeProfile';
-import OnboardingForm from './pages/Onboarding/OnboardingForm';
-import OffboardingForm from './pages/Onboarding/OffboardingForm';
-import AttendanceTracker from './pages/Attendance/AttendanceTracker';
-import ShiftScheduler from './pages/Attendance/ShiftScheduler';
-import LeaveRequests from './pages/Leave/LeaveRequests';
-import PayrollDashboard from './pages/Payroll/PayrollDashboard';
-import PolicyAcknowledgment from './pages/Compliance/PolicyAcknowledgment';
-import PerformanceReview from './pages/Performance/PerformanceReview';
-import TrainingModules from './pages/Learning/TrainingModules';
-import CareerPathing from './pages/Career/CareerPathing';
-import EngagementSurvey from './pages/Engagement/EngagementSurvey';
-import HRAnalytics from './pages/Analytics/HRAnalytics';
-import WellnessDashboard from './pages/Wellness/WellnessDashboard';
+import Dashboard          from './components/Dashboard.jsx';
+import AttendanceTracker  from './pages/Attendance/AttendanceTracker.jsx';
+import ShiftScheduler     from './pages/Attendance/ShiftScheduler.jsx';
+import LeaveRequests      from './pages/Leave/LeaveRequests.jsx';
+import PayrollDashboard   from './pages/Payroll/PayrollDashboard.jsx';
+import EmployeeList       from './pages/Employee/EmployeeList.jsx';
+import EmployeeProfile    from './pages/Employee/EmployeeProfile.jsx';
+import PerformanceReview  from './pages/Performance/PerformanceReview.jsx';
+import TrainingModule     from './pages/Learning/TrainingModules.jsx';
+import CareerPathing      from './pages/Career/CareerPathing.jsx';
+import EngagementSurvey   from './pages/Engagement/EngagementSurvey.jsx';
+import WellnessDashboard  from './pages/Wellness/WellnessDashboard.jsx';
+import PolicyAcknowledgment from './pages/Compliance/PolicyAcknowledgment.jsx';
+import OnboardingForm     from './pages/Onboarding/OnboardingForm.jsx';
+import OffboardingForm    from './pages/Onboarding/OffboardingForm.jsx';
+import HRAnalytics        from './pages/Analytics/HRAnalytics.jsx';
+import AdminPanel         from './components/Admin/AdminPanel.jsx';
 
-const ProtectedRoute = ({ roles, children }) => {
-  const { user, loading } = useContext(AuthContext);
-
-  if (loading) return <p>Loading...</p>;
-  if (!user) return <Navigate to="/login" />;
-
-  if (roles && !roles.includes(user.role))
-    return <Navigate to="/unauthorized" />;
-
+/* ─── Protected route wrapper ───────────────────────────── */
+function RequireAuth({ children, roles }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return <div className="spinner-center"><div className="spinner spinner-lg" /></div>;
+  if (!user)   return <Navigate to="/login" state={{ from: location }} replace />;
+  if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />;
   return children;
-};
+}
 
-const Layout = ({ children }) => (
-  <div className="layout">
-    <Navbar />
-    <div className="layout-body">
-      <Sidebar />
-      <main className="main-content">{children}</main>
-    </div>
-  </div>
-);
-
-function App() {
-  const { user, loading } = useContext(AuthContext);
-
-  if (loading) return <p>Loading...</p>;
-
+/* ─── Main layout wrapper ───────────────────────────────── */
+function AppLayout({ children }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   return (
-    <Routes>
-
-      {/* Login Route */}
-      <Route
-        path="/login"
-        element={
-          user ? <Navigate to="/dashboard" replace /> : <Login />
-        }
-      />
-
-      {/* Default Redirect */}
-      <Route
-        path="/"
-        element={
-          user ? <Navigate to="/dashboard" replace />
-               : <Navigate to="/login" replace />
-        }
-      />
-
-      {/* Protected Routes */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <HRAnalytics />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/employees"
-        element={
-          <ProtectedRoute roles={['admin', 'employer']}>
-            <Layout>
-              <EmployeeList />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <EmployeeProfile />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/onboarding"
-        element={
-          <ProtectedRoute roles={['admin', 'employer']}>
-            <Layout>
-              <OnboardingForm />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/offboarding"
-        element={
-          <ProtectedRoute roles={['admin', 'employer']}>
-            <Layout>
-              <OffboardingForm />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/attendance"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <AttendanceTracker />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/shifts"
-        element={
-          <ProtectedRoute roles={['admin', 'employer']}>
-            <Layout>
-              <ShiftScheduler />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/leave"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <LeaveRequests />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/payroll"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <PayrollDashboard />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/compliance"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <PolicyAcknowledgment />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/performance"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <PerformanceReview />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/learning"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <TrainingModules />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/career"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <CareerPathing />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/engagement"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <EngagementSurvey />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/wellness"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <WellnessDashboard />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route path="/unauthorized" element={<h2>Unauthorized Access</h2>} />
-      <Route path="*" element={<h2>Page Not Found</h2>} />
-
-    </Routes>
+    <div className="app-layout">
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="main-area">
+        <Navbar onMenuClick={() => setSidebarOpen(s => !s)} />
+        <main className="page-content">{children}</main>
+      </div>
+    </div>
   );
 }
 
-export default App;
+/* ─── App ────────────────────────────────────────────────── */
+export default function App() {
+  const { user } = useAuth();
+
+  return (
+    <Routes>
+      {/* Public */}
+      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+
+      {/* All authenticated */}
+      <Route path="/dashboard" element={<RequireAuth><AppLayout><Dashboard /></AppLayout></RequireAuth>} />
+      <Route path="/attendance" element={<RequireAuth><AppLayout><AttendanceTracker /></AppLayout></RequireAuth>} />
+      <Route path="/attendance/shifts" element={<RequireAuth><AppLayout><ShiftScheduler /></AppLayout></RequireAuth>} />
+      <Route path="/leave" element={<RequireAuth><AppLayout><LeaveRequests /></AppLayout></RequireAuth>} />
+      <Route path="/payroll" element={<RequireAuth><AppLayout><PayrollDashboard /></AppLayout></RequireAuth>} />
+      <Route path="/performance" element={<RequireAuth><AppLayout><PerformanceReview /></AppLayout></RequireAuth>} />
+      <Route path="/learning" element={<RequireAuth><AppLayout><TrainingModule /></AppLayout></RequireAuth>} />
+      <Route path="/career" element={<RequireAuth><AppLayout><CareerPathing /></AppLayout></RequireAuth>} />
+      <Route path="/engagement" element={<RequireAuth><AppLayout><EngagementSurvey /></AppLayout></RequireAuth>} />
+      <Route path="/wellness" element={<RequireAuth><AppLayout><WellnessDashboard /></AppLayout></RequireAuth>} />
+      <Route path="/compliance" element={<RequireAuth><AppLayout><PolicyAcknowledgment /></AppLayout></RequireAuth>} />
+      <Route path="/onboarding" element={<RequireAuth><AppLayout><OnboardingForm /></AppLayout></RequireAuth>} />
+      <Route path="/offboarding" element={<RequireAuth><AppLayout><OffboardingForm /></AppLayout></RequireAuth>} />
+      <Route path="/profile" element={<RequireAuth><AppLayout><EmployeeProfile /></AppLayout></RequireAuth>} />
+
+      {/* Admin / HR / Manager */}
+      <Route path="/employees" element={<RequireAuth roles={['admin','superuser','hr','manager']}><AppLayout><EmployeeList /></AppLayout></RequireAuth>} />
+      <Route path="/employees/:id" element={<RequireAuth roles={['admin','superuser','hr','manager']}><AppLayout><EmployeeProfile /></AppLayout></RequireAuth>} />
+      <Route path="/analytics" element={<RequireAuth roles={['admin','superuser','hr']}><AppLayout><HRAnalytics /></AppLayout></RequireAuth>} />
+      <Route path="/admin" element={<RequireAuth roles={['admin','superuser']}><AppLayout><AdminPanel /></AppLayout></RequireAuth>} />
+
+      {/* Fallback */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}
