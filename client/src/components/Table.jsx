@@ -1,34 +1,28 @@
-const Table = ({ columns, data, loading }) => {
-  if (loading) return <p>Loading...</p>;
-
-  if (!data || data.length === 0)
-    return <p>No records found.</p>;
-
-  return (
-    <table className="table">
-      <thead>
-        <tr>
-          {columns.map((col, i) => (
-            <th key={i}>{col.header}</th>
-          ))}
-        </tr>
-      </thead>
-
-      <tbody>
-        {data.map((row, rowIndex) => (
-          <tr key={rowIndex}>
-            {columns.map((col, colIndex) => (
-              <td key={colIndex}>
-                {col.render
-                  ? col.render(row)
-                  : row[col.accessor]}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+export default function Table({ columns, data, loading, emptyMsg = 'No records found.' }) {
+  if (loading) return (
+    <div className="spinner-center"><div className="spinner spinner-lg" /></div>
   );
-};
-
-export default Table;
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>{columns.map(c => <th key={c.key || c.label}>{c.label}</th>)}</tr>
+        </thead>
+        <tbody>
+          {!data?.length
+            ? <tr><td colSpan={columns.length} style={{ textAlign:'center', padding:40, color:'var(--text-muted)' }}>{emptyMsg}</td></tr>
+            : data.map((row, i) => (
+                <tr key={row._id || i}>
+                  {columns.map(col => (
+                    <td key={col.key || col.label}>
+                      {col.render ? col.render(row) : row[col.key]}
+                    </td>
+                  ))}
+                </tr>
+              ))
+          }
+        </tbody>
+      </table>
+    </div>
+  );
+}
