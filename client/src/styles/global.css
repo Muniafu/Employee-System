@@ -64,18 +64,63 @@ input, select, textarea { font-family: inherit; }
 
 .sidebar {
   width: var(--sidebar-w);
-  min-height: 100vh;
+  height: 100vh;
   background: var(--surface);
   border-right: 1px solid var(--border);
+
   display: flex;
   flex-direction: column;
+
   position: fixed;
-  top: 0; 
+  top: 0;
   left: 0;
+
   z-index: 200;
-  transition: transform .3s cubic-bezier(0.4, 0, 0.2, 1); /* Smoother animation */
+
+  overflow: hidden;
+
+  transition:
+    width .25s ease,
+    transform .3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.sidebar.collapsed { transform: translateX(-100%); }
+
+/* Sidebar collapsed */
+.sidebar.collapsed {
+  width: 84px;
+}
+
+/* Scrollable navigation area */
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  padding: 8px 0;
+
+  scrollbar-width: thin;
+}
+
+/* Better scrollbar */
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 999px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Footer always visible */
+.sidebar-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  padding: 12px;
+  background: var(--surface);
+}
 
 .main-area {
   margin-left: var(--sidebar-w);
@@ -85,7 +130,7 @@ input, select, textarea { font-family: inherit; }
   min-height: 100vh;
   transition: margin-left .25s ease;
 }
-.main-area.full { margin-left: 0; }
+.main-area.full { margin-left: 84px; }
 
 /* Default state for mobile: hidden */
 @media (max-width: 768px) {
@@ -104,8 +149,13 @@ input, select, textarea { font-family: inherit; }
   }
 }
 
+.sidebar-overlay {
+  backdrop-filter: blur(2px);
+}
+
 .topbar {
   height: var(--topbar-h);
+  flex-shrink: 0;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -145,6 +195,27 @@ input, select, textarea { font-family: inherit; }
 .nav-link.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
 .nav-link .nav-icon { font-size: 16px; width: 18px; text-align: center; flex-shrink: 0; }
 .nav-link .badge { margin-left: auto; background: var(--danger); color: #fff; border-radius: 10px; font-size: 10px; font-weight: 700; padding: 1px 6px; }
+
+.sidebar.collapsed .brand-text,
+.sidebar.collapsed .nav-section-label,
+.sidebar.collapsed .nav-link span:not(.nav-icon),
+.sidebar.collapsed .avatar + div,
+.sidebar.collapsed .nav-link .badge {
+  display: none;
+}
+
+.sidebar.collapsed .nav-link {
+  justify-content: center;
+  padding: 12px;
+}
+
+.sidebar.collapsed .sidebar-brand {
+  justify-content: center;
+}
+
+.sidebar.collapsed .avatar {
+  margin: 0 auto;
+}
 
 /* ── Cards ──────────────────────────────────────────────── */
 .card {

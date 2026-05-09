@@ -29,7 +29,11 @@ const ADMIN_NAV = [
   ]},
 ];
 
-export default function Sidebar({ open, onClose }) {
+export default function Sidebar({
+  open,
+  collapsed,
+  onClose
+}) {
   const { user, logout, isHR } = useAuth();
   // const navigate = useNavigate();
 
@@ -38,7 +42,13 @@ export default function Sidebar({ open, onClose }) {
   return (
     <>
       {open && <div className="sidebar-overlay" onClick={onClose} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.4)',zIndex:199 }} />}
-      <aside className={`sidebar ${open ? 'mobile-open' : ''}`}>
+      <aside
+        className={`
+          sidebar
+          ${open ? 'mobile-open' : ''}
+          ${collapsed ? 'collapsed' : ''}
+        `}
+      >
         {/* Brand */}
         <div className="sidebar-brand">
           <div className="brand-icon">E</div>
@@ -49,7 +59,7 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         {/* Nav */}
-        <nav style={{ flex:1, overflowY:'auto', padding:'8px 0' }}>
+        <nav className="sidebar-nav">
           {allNav.map(section => (
             <div key={section.section} className="nav-section">
               <div className="nav-section-label">{section.section}</div>
@@ -68,7 +78,7 @@ export default function Sidebar({ open, onClose }) {
         </nav>
 
         {/* User footer */}
-        <div style={{ padding:'12px', borderTop:'1px solid var(--border)' }}>
+        <div className="sidebar-footer">
           <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:8, background:'var(--surface-2)', marginBottom:8 }}>
             <div className="avatar" style={{ flexShrink:0 }}>
               {user?.firstName?.[0]}{user?.lastName?.[0]}

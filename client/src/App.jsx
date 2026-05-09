@@ -41,12 +41,30 @@ function RequireAuth({ children, roles }) {
 /* ─── Main layout wrapper ───────────────────────────────── */
 function AppLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const handleMenuClick = () => {
+    if (window.innerWidth <= 768) {
+      setSidebarOpen(s => !s);
+    } else {
+      setSidebarCollapsed(s => !s);
+    }
+  };
+
   return (
     <div className="app-layout">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="main-area">
-        <Navbar onMenuClick={() => setSidebarOpen(s => !s)} />
-        <main className="page-content">{children}</main>
+      <Sidebar
+        open={sidebarOpen}
+        collapsed={sidebarCollapsed}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      <div className={`main-area ${sidebarCollapsed ? 'full' : ''}`}>
+        <Navbar onMenuClick={handleMenuClick} />
+
+        <main className="page-content">
+          {children}
+        </main>
       </div>
     </div>
   );
