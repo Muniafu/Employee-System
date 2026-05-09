@@ -1,25 +1,27 @@
-const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = require('../config/env');
-const Employee = require('../models/Employee');
+const { verifyToken } = require('../utils/token');
+const User = require('../models/User');
 
-module.exports = async (req, res, next) => {
-    try {
-        const auth = req.headers.authorization;
-        if (!auth || !auth.startsWith('Bearer ')) {
-            return res.status(401).json({ success: false, message: 'Unauthorized' });
-        }
+const auth = async (req, res, next) => {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'No token provided. Access denied.' });
+  }
 
-        const token = auth.split(' ')[1];
-        const decoded = jwt.verify(token, JWT_SECRET);
-
-        const user = await Employee.findById(decoded.id).select('-password');
-        if (!user || user.status !== 'active') {
-            return res.status(401).json({ success: false, message: 'Account inactive' });
-        }
-
-        req.user = user;
-        next();
-    } catch (err) {
-        return res.status(401).json({ success: false, message: 'Invalid token' });
+  const token = header.split(' ')[1];
+  try {
+    const decoded = verifyToken(token);
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) return res.status(401).json({ success: false, message: 'User no longer exists.' });
+    if (!user.isActive) return res.status(403).json({ success: false, message: 'Account deactivated.' });
+    if (user.changedPasswordAfter(decoded.iat)) {
+      return res.status(401).json({ success: false, message: 'Password recently changed. Please log in again.' });
     }
+    req.user = user;
+    next();
+  } catch (err) {
+    const msg = err.name === 'TokenExpiredError' ? 'Token expired.' : 'Invalid token.';
+    return res.status(401).json({ success: false, message: msg });
+  }
 };
+
+module.exports = auth;

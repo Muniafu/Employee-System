@@ -1,15 +1,17 @@
-const reteLimit = require('express-rate-limit');
+const rateLimit = require('express-rate-limit');
 
-exports.authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    message: {
-        success: false,
-        mesage: 'Too many attempts. try again later.'
-    }
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 20,
+  message: { success: false, message: 'Too many requests. Please wait 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
-exports.apiLimiter = rateLimit({
-    windoMs: 1 * 60 * 1000,
-    max: 100
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 min
+  max: 200,
+  message: { success: false, message: 'Rate limit exceeded. Slow down.' },
 });
+
+module.exports = { authLimiter, apiLimiter };
