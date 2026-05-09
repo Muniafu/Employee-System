@@ -1,24 +1,14 @@
-const express = require('express');
-const router = express.Router();
-
+const router = require('express').Router();
+const c = require('../controllers/engagementController');
 const auth = require('../middleware/authMiddleware');
-const authorize = require('../middleware/roleMiddleware');
-
-const {
-  createSurvey,
-  getSurveys,
-  submitSurvey,
-  getResults
-} = require('../controllers/engagementController');
+const { authorize } = require('../middleware/roleMiddleware');
 
 router.use(auth);
 
-// Employee
-router.get('/', authorize('employee'), getSurveys);
-router.post('/', authorize('employee'), submitSurvey);
-
-// Admin
-router.post('/create', authorize('admin', 'employer'), createSurvey);
-router.get('/results', authorize('admin', 'employer'), getResults);
+router.post('/', authorize('admin', 'superuser', 'hr'), c.create);
+router.get('/', c.getAll);
+router.get('/:id', c.getOne);
+router.post('/:id/submit', c.submit);
+router.get('/:id/results', authorize('admin', 'superuser', 'hr'), c.getResults);
 
 module.exports = router;

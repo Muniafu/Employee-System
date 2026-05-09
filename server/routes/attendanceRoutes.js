@@ -1,14 +1,14 @@
-const express = require('express');
-const router = express.Router();
-
+const router = require('express').Router();
+const c = require('../controllers/attendanceController');
 const auth = require('../middleware/authMiddleware');
-const authorize = require('../middleware/roleMiddleware');
-const { clockIn, clockOut, getMyAttendance, getAllAttendance, getByEmployee } = require('../controllers/attendanceController');
+const { authorize } = require('../middleware/roleMiddleware');
 
-router.post('/clock-in', auth, authorize('employee'), clockIn);
-router.post('/clock-out', auth, authorize('employee'), clockOut);
-router.get('/me', auth, authorize('employee'), getMyAttendance);
-router.get('/employee/:employeeId', auth, authorize('admin', 'employer'), getByEmployee);
-router.get('/', auth, authorize('admin', 'employer'), getAllAttendance);
+router.use(auth);
+
+router.post('/clock-in', c.clockIn);
+router.post('/clock-out', c.clockOut);
+router.get('/me', c.getMyAttendance);
+router.get('/today', c.getToday);
+router.get('/all', authorize('admin', 'superuser', 'hr', 'manager'), c.getAll);
 
 module.exports = router;

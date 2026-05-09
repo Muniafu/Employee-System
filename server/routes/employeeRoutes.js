@@ -1,60 +1,15 @@
-const express = require('express');
-const router = express.Router();
-
+const router = require('express').Router();
+const c = require('../controllers/employeeController');
 const auth = require('../middleware/authMiddleware');
-const authorize = require('../middleware/roleMiddleware');
+const { authorize } = require('../middleware/roleMiddleware');
 
-const { 
-    getEmployees, 
-    getEmployeeById, 
-    getMyProfile, 
-    createEmployee, 
-    updateEmployee, 
-    deleteEmployee 
-} = require('../controllers/employeeController');
+router.use(auth);
 
-
-// GET current user profile
-router.get('/me', auth, getMyProfile);
-
-// GET all employees (Admin/employer only)
-router.get(
-    '/', 
-    auth, 
-    authorize('admin', 'employer'), 
-    getEmployees
-);
-
-// GET single employee
-router.get(
-    '/:id',
-    auth,
-    authorize('admin', 'employer'),
-    getEmployeeById
-);
-
-// CREATE employee
-router.post(
-    '/',
-    auth,
-    authorize('admin', 'employer'),
-    createEmployee
-);
-
-// UPDATE employee
-router.put(
-    '/:id',
-    auth,
-    authorize('admin', 'employer'),
-    updateEmployee
-);
-
-// DELETE employee
-router.delete(
-    '/:id',
-    auth,
-    authorize('admin'),
-    deleteEmployee
-);
+router.get('/me', c.getMyProfile);
+router.get('/', authorize('admin', 'superuser', 'hr', 'manager'), c.getAll);
+router.get('/:id', c.getOne);
+router.put('/:id', c.update);
+router.patch('/:id/deactivate', authorize('admin', 'superuser', 'hr'), c.deactivate);
+router.delete('/:id', authorize('superuser'), c.remove);
 
 module.exports = router;

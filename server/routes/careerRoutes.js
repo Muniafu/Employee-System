@@ -1,26 +1,15 @@
-const express = require('express');
-const router = express.Router();
-
+const router = require('express').Router();
+const c = require('../controllers/careerController');
 const auth = require('../middleware/authMiddleware');
-const authorize = require('../middleware/roleMiddleware');
-
-const {
-  createPath,
-  getAllPaths,
-  getByEmployee,
-  getMyPath,
-  updatePath
-} = require('../controllers/careerController');
+const { authorize } = require('../middleware/roleMiddleware');
 
 router.use(auth);
 
-// Employee
-router.get('/me', authorize('employee'), getMyPath);
-
-// Admin
-router.get('/', authorize('admin', 'employer'), getAllPaths);
-router.get('/employee/:employeeId', authorize('admin', 'employer'), getByEmployee);
-router.post('/', authorize('admin', 'employer'), createPath);
-router.put('/:id', authorize('admin', 'employer'), updatePath);
+router.post('/', c.create);
+router.get('/', c.getAll);
+router.get('/:id', c.getOne);
+router.put('/:id', c.update);
+router.patch('/:id/milestones/:milestoneId/complete', c.completeMilestone);
+router.patch('/:id/flag-succession', authorize('admin', 'superuser', 'hr'), c.flagSuccession);
 
 module.exports = router;

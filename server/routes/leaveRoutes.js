@@ -1,24 +1,15 @@
-const express = require('express');
-const router = express.Router();
-
+const router = require('express').Router();
+const c = require('../controllers/leaveController');
 const auth = require('../middleware/authMiddleware');
-const authorize = require('../middleware/roleMiddleware');
+const { authorize } = require('../middleware/roleMiddleware');
 
-const {
-  requestLeave,
-  getMyLeaves,
-  getAllLeaves,
-  approveLeave,
-  rejectLeave
-} = require('../controllers/leaveController');
+router.use(auth);
 
-// Employee routes
-router.post('/', auth, authorize('employee'), requestLeave);
-router.get('/me', auth, authorize('employee'), getMyLeaves);
-
-// Admin/Employer routes
-router.get('/', auth, authorize('admin', 'employer'), getAllLeaves);
-router.patch('/:id/approve', auth, authorize('admin', 'employer'), approveLeave);
-router.patch('/:id/reject', auth, authorize('admin', 'employer'), rejectLeave);
+router.post('/', c.apply);
+router.get('/', c.getAll);
+router.get('/on-leave', c.getOnLeave);
+router.patch('/:id/approve', authorize('admin', 'superuser', 'hr', 'manager'), c.approve);
+router.patch('/:id/reject', authorize('admin', 'superuser', 'hr', 'manager'), c.reject);
+router.delete('/:id/cancel', c.cancel);
 
 module.exports = router;

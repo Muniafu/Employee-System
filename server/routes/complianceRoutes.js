@@ -1,20 +1,15 @@
-const express = require('express');
-const router = express.Router();
-
+const router = require('express').Router();
+const c = require('../controllers/complianceController');
 const auth = require('../middleware/authMiddleware');
-const authorize = require('../middleware/roleMiddleware');
+const { authorize } = require('../middleware/roleMiddleware');
 
-const {
-  getPolicies,
-  acknowledgePolicy,
-  getComplianceLogs
-} = require('../controllers/complianceController');
+router.use(auth);
 
-// Employees
-router.get('/', auth, getPolicies);
-router.post('/:id/acknowledge', auth, authorize('employee'), acknowledgePolicy);
-
-// Admin
-router.get('/logs', auth, authorize('admin', 'employer'), getComplianceLogs);
+router.post('/', authorize('admin', 'superuser', 'hr'), c.create);
+router.get('/', c.getAll);
+router.get('/:id', c.getOne);
+router.post('/:id/acknowledge', c.acknowledge);
+router.get('/:id/status', authorize('admin', 'superuser', 'hr'), c.getAcknowledgmentStatus);
+router.put('/:id', authorize('admin', 'superuser', 'hr'), c.update);
 
 module.exports = router;

@@ -1,19 +1,15 @@
-const express = require('express');
-const router = express.Router();
-
+const router = require('express').Router();
+const c = require('../controllers/analyticsController');
 const auth = require('../middleware/authMiddleware');
-const authorize = require('../middleware/roleMiddleware');
+const { authorize } = require('../middleware/roleMiddleware');
 
-const {
-  dashboard,
-  attendance,
-  payroll
-} = require('../controllers/analyticsController');
+router.use(auth, authorize('admin', 'superuser', 'hr'));
 
-router.use(auth);
-
-router.get('/dashboard', authorize('admin', 'employer'), dashboard);
-router.get('/attendance', authorize('admin', 'employer'), attendance);
-router.get('/payroll', authorize('admin', 'employer'), payroll);
+router.get('/dashboard', c.dashboard);
+router.get('/attendance', c.attendance);
+router.get('/payroll', c.payroll);
+router.get('/headcount', c.headcount);
+router.get('/leave', c.leave);
+router.get('/turnover', c.turnover);
 
 module.exports = router;
