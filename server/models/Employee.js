@@ -1,66 +1,47 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const ROLES = require('../utils/roles');
 
 const employeeSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        index: true
-    },
-
-    password: { type: String, required: true },
-
-    role: {
-        type: String,
-        enum: Object.values(ROLES),
-        required: true,
-        default: ROLES.EMPLOYEE
-    },
-
-    organizationId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Organization',
-    required: true,
-    index: true
-    },
-
-    department: { 
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Department',
-        required: true
-    },
-
-    salary: { 
-        type: Number,
-        min: 0,
-        required: function() {
-            return this.role === ROLES.EMPLOYEE;
-        } 
-    },
-
-    status: {
-        type: String,
-        enum: ['active', 'inactive', 'terminated'],
-        default: 'active',
-        required: true
-    },
+  user:        { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+  employeeId:  { type: String, unique: true },
+  department:  { type: String, default: '' },
+  position:    { type: String, default: '' },
+  phone:       { type: String, default: '' },
+  address:     { type: String, default: '' },
+  dateOfBirth: { type: Date },
+  startDate:   { type: Date, default: Date.now },
+  endDate:     { type: Date },
+  salary:      { type: Number, default: 0 },
+  currency:    { type: String, default: 'KES' },
+  profileImage:{ type: String, default: '' },
+  manager:     { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  status:      { type: String, enum: ['active', 'on_leave', 'terminated', 'probation'], default: 'active' },
+  leaveBalance: {
+    annual:    { type: Number, default: 21 },
+    sick:      { type: Number, default: 10 },
+    maternity: { type: Number, default: 90 },
+    paternity: { type: Number, default: 14 },
+  },
+  emergencyContact: {
+    name:         { type: String, default: '' },
+    phone:        { type: String, default: '' },
+    relationship: { type: String, default: '' },
+  },
+  bankDetails: {
+    bankName:      { type: String, default: '' },
+    accountNumber: { type: String, default: '' },
+    branchCode:    { type: String, default: '' },
+  },
+  taxPin:       { type: String, default: '' },
+  nssfNumber:   { type: String, default: '' },
+  nhifNumber:   { type: String, default: '' },
 }, { timestamps: true });
 
-// Hash password before saving
+// Auto-generate employeeId before save
 employeeSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
-    this.password = await bcrypt.hash(this.password, 12);
-    next();
+  if (!this.employeeId) {
+    this.employeeId = `EMP${Date.now()}`;
+  }
+  next();
 });
-
-// Method to compare passwords
-employeeSchema.methods.comparePassword = function (password) {
-    return bcrypt.compare(password, this.password);
-};
 
 module.exports = mongoose.model('Employee', employeeSchema);

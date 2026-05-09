@@ -1,49 +1,25 @@
 const mongoose = require('mongoose');
 
-const participantSchema = new mongoose.Schema({
-  employee: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Employee',
-    required: true
-  },
-  enrolledAt: {
-    type: Date,
-    default: Date.now
-  },
-  status: {
-    type: String,
-    enum: ['enrolled', 'completed', 'dropped'],
-    default: 'enrolled'
-  }
-}, { _id: false });
-
 const wellnessSchema = new mongoose.Schema({
-  organizationId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Organization',
-    required: true,
-    index: true
-  },
-
-  title: { type: String, required: true },
-  description: String,
-
-  type: {
-    type: String,
-    enum: ['mental', 'physical', 'financial', 'social'],
-    default: 'mental'
-  },
-
-  active: {
-    type: Boolean,
-    default: true,
-    index: true
-  },
-
-  participants: [participantSchema]
-
+  title:        { type: String, required: true },
+  description:  { type: String, default: '' },
+  category:     { type: String, enum: ['mental_health', 'physical', 'financial', 'social', 'eap', 'other'], default: 'other' },
+  type:         { type: String, enum: ['program', 'resource', 'challenge', 'session'], default: 'program' },
+  provider:     { type: String, default: '' },
+  startDate:    { type: Date },
+  endDate:      { type: Date },
+  isActive:     { type: Boolean, default: true },
+  maxCapacity:  { type: Number, default: 100 },
+  enrollments:  [{
+    employee:    { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+    enrolledAt:  { type: Date, default: Date.now },
+    status:      { type: String, enum: ['enrolled', 'completed', 'withdrawn'], default: 'enrolled' },
+    completedAt: { type: Date },
+    feedback:    { type: String, default: '' },
+  }],
+  createdBy:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  content:      { type: String, default: '' }, // URL or text
+  tags:         [String],
 }, { timestamps: true });
-
-wellnessSchema.index({ organizationId: 1, title: 1 });
 
 module.exports = mongoose.model('Wellness', wellnessSchema);

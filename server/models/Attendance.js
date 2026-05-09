@@ -1,46 +1,96 @@
 const mongoose = require('mongoose');
 
-const attendanceSchema = new mongoose.Schema({
+const attendanceSchema = new mongoose.Schema(
+  {
     employee: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Employee',
-        required: true,
-        index: true
-    },
-
-    organizationId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Organization',
-    required: true,
-    index: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Employee',
+      required: true,
+      index: true,
     },
 
     date: {
-        type: Date,
-        required: true,
+      type: String,
+      required: true,
+      index: true,
     },
 
-    clockIn: { type: Date, required: true },
-    clockOut: { type: Date },
+    clockIn: {
+      type: Date,
+    },
 
-    totalHours: { type: Number, default: 0 },
+    clockOut: {
+      type: Date,
+    },
 
-}, { timestamps: true });
+    hoursWorked: {
+      type: Number,
+      default: 0,
+    },
 
-attendanceSchema.index(
-    { employee: 1, date: 1 }, 
-    { unique: true }
+    overtime: {
+      type: Number,
+      default: 0,
+    },
+
+    isLate: {
+      type: Boolean,
+      default: false,
+    },
+
+    status: {
+      type: String,
+      enum: [
+        'present',
+        'absent',
+        'half_day',
+        'late',
+        'on_leave',
+      ],
+      default: 'present',
+    },
+
+    location: {
+      type: String,
+      default: 'office',
+    },
+
+    note: {
+      type: String,
+      default: '',
+    },
+  },
+  {
+    timestamps: true,
+  }
 );
 
-attendanceSchema.pre('save', function (next) {
-    if (this.clockOut && this.clockOut <= this.clockIn) {
-        return next(new Error('Clock-out time must be after clock-in time'));
-    }
+attendanceSchema.index(
+  {
+    employee: 1,
+    date: 1,
+  },
+  {
+    unique: true,
+  }
+);
 
-    if (this.clockIn && this.clockOut) {
-        this.totalHours = (this.clockOut - this.clockIn) / (1000 * 60 * 60);
-    }
-    next();
-});
+attendanceSchema.methods.calculateHours = function () {
+  if (this.clockIn && this.clockOut) {
+    const diff = this.clockOut - this.clockIn;
 
-module.exports = mongoose.model('Attendance', attendanceSchema);
+    this.hoursWorked = parseFloat(
+      (diff / (1000 * 60 * 60)).toFixed(2)
+    );
+
+    this.overtime = Math.max(
+      0,
+      parseFloat((this.hoursWorked - 8).toFixed(2))
+    );
+  }
+};
+
+module.exports = mongoose.model(
+  'Attendance',
+  attendanceSchema
+);
