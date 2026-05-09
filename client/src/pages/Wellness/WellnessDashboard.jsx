@@ -240,7 +240,7 @@ export default function WellnessDashboard() {
             <div style={{ fontSize:11, opacity:.8 }}>Free helpline</div>
           </div>
           <div style={{ textAlign:'center', background:'rgba(255,255,255,.15)', borderRadius:10, padding:'10px 20px' }}>
-            <div style={{ fontWeight:800, fontSize:18 }}>📧 eap@company.com</div>
+            <div style={{ fontWeight:800, fontSize:18 }}>📧 hris@company.com</div>
             <div style={{ fontSize:11, opacity:.8 }}>Email support</div>
           </div>
         </div>

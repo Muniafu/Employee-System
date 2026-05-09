@@ -2,23 +2,47 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 
 const NAV = [
-  { section: 'Main', links: [
-    { to: '/dashboard',   icon: '📊', label: 'Dashboard' },
-    { to: '/attendance',  icon: '⏱️', label: 'Attendance' },
-    { to: '/leave',       icon: '🏖️', label: 'Leave' },
-    { to: '/payroll',     icon: '💰', label: 'Payroll' },
-  ]},
-  { section: 'Development', links: [
-    { to: '/performance', icon: '🎯', label: 'Performance' },
-    { to: '/learning',    icon: '📚', label: 'Learning' },
-    { to: '/career',      icon: '🗂️', label: 'Career' },
-  ]},
-  { section: 'Organisation', links: [
-    { to: '/engagement',  icon: '🧠', label: 'Engagement' },
-    { to: '/wellness',    icon: '💪', label: 'Wellness' },
-    { to: '/compliance',  icon: '📋', label: 'Compliance' },
-    { to: '/onboarding',  icon: '🚀', label: 'Onboarding' },
-  ]},
+  {
+    section: 'Main',
+    roles: ['employee', 'manager', 'hr'],
+    links: [
+      { to: '/dashboard', icon: '📊', label: 'Dashboard' },
+      { to: '/attendance', icon: '⏱️', label: 'Attendance' },
+      { to: '/leave', icon: '🏖️', label: 'Leave' },
+      { to: '/payroll', icon: '💰', label: 'Payroll' },
+    ],
+  },
+
+  {
+    section: 'Development',
+    roles: ['employee', 'manager', 'hr'],
+    links: [
+      { to: '/performance', icon: '🎯', label: 'Performance' },
+      { to: '/learning', icon: '📚', label: 'Learning' },
+      { to: '/career', icon: '🗂️', label: 'Career' },
+    ],
+  },
+
+  {
+    section: 'Organisation',
+    roles: ['employee', 'manager', 'hr'],
+    links: [
+      { to: '/engagement', icon: '🧠', label: 'Engagement' },
+      { to: '/wellness', icon: '💪', label: 'Wellness' },
+      { to: '/compliance', icon: '📋', label: 'Compliance' },
+      { to: '/onboarding', icon: '🚀', label: 'Onboarding' },
+    ],
+  },
+
+  {
+    section: 'Administration',
+    roles: ['admin', 'superuser', 'hr'],
+    links: [
+      { to: '/employees', icon: '👥', label: 'Employees' },
+      { to: '/analytics', icon: '📈', label: 'Analytics' },
+      { to: '/admin', icon: '⚙️', label: 'Admin Panel' },
+    ],
+  },
 ];
 
 const ADMIN_NAV = [
@@ -34,10 +58,12 @@ export default function Sidebar({
   collapsed,
   onClose
 }) {
-  const { user, logout, isHR } = useAuth();
+  const { user, logout } = useAuth();
   // const navigate = useNavigate();
 
-  const allNav = isHR ? [...NAV, ...ADMIN_NAV] : NAV;
+  const allNav = NAV.filter(section =>
+    section.roles.includes(user?.role)
+  );
 
   return (
     <>

@@ -27,6 +27,7 @@ import OnboardingForm     from './pages/Onboarding/OnboardingForm.jsx';
 import OffboardingForm    from './pages/Onboarding/OffboardingForm.jsx';
 import HRAnalytics        from './pages/Analytics/HRAnalytics.jsx';
 import AdminPanel         from './components/Admin/AdminPanel.jsx';
+import Notifications from './pages/Notifications/Notifications.jsx';
 
 /* ─── Protected route wrapper ───────────────────────────── */
 function RequireAuth({ children, roles }) {
@@ -78,6 +79,13 @@ export default function App() {
     <Routes>
       {/* Public */}
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route path="/notifications" element={
+        <RequireAuth>
+          <AppLayout>
+            <Notifications />
+          </AppLayout>
+        </RequireAuth>
+      }/>
 
       {/* All authenticated */}
       <Route path="/dashboard" element={<RequireAuth><AppLayout><Dashboard /></AppLayout></RequireAuth>} />
