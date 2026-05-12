@@ -167,6 +167,7 @@ exports.getMe = async (req, res, next) => {
 };
 
 // ADMIN REGISTER
+// ADMIN / HR REGISTER
 exports.registerAdmin = async (req, res, next) => {
   try {
 
@@ -182,12 +183,47 @@ exports.registerAdmin = async (req, res, next) => {
       salary,
     } = req.body;
 
+    const allowedRoles = [
+      'manager',
+      'hr',
+      'admin',
+    ];
+
+    if (
+      role &&
+      !allowedRoles.includes(role)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role assignment.',
+      });
+    }
+
+    // Only superuser can create admins
+    if (
+      role === 'admin' &&
+      req.user.role !== 'superuser'
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only superusers can create admin accounts.',
+      });
+    }
+
+    // Prevent superuser creation through endpoint
+    if (role === 'superuser') {
+      return res.status(403).json({
+        success: false,
+        message: 'Superuser accounts cannot be created through this endpoint.',
+      });
+    }
+
     const user = await createUserWithEmployee({
       firstName,
       lastName,
       email,
       password,
-      role: role || 'admin',
+      role: role || 'manager',
       department,
       position,
       phone,
@@ -196,6 +232,7 @@ exports.registerAdmin = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
+      message: 'Privileged account created successfully.',
       data: {
         user,
       },

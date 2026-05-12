@@ -50,37 +50,164 @@ exports.getAllUsers = async (req, res, next) => {
 // PATCH /api/admin/users/:id/role
 exports.changeRole = async (req, res, next) => {
   try {
-    const { role } = req.body;
-    const allowed = ['employee', 'manager', 'hr', 'admin', 'superuser'];
-    if (!allowed.includes(role)) return res.status(400).json({ success: false, message: 'Invalid role.' });
 
-    // Only superuser can assign superuser
-    if (role === 'superuser' && req.user.role !== 'superuser') {
-      return res.status(403).json({ success: false, message: 'Only superusers can assign superuser role.' });
+    const { role } = req.body;
+
+    const allowedRoles = [
+      'employee',
+      'manager',
+      'hr',
+      'admin',
+      'superuser',
+    ];
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role.',
+      });
     }
 
-    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true });
-    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
-    res.status(200).json({ success: true, data: user });
-  } catch (err) { next(err); }
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+      });
+    }
+
+    // Protect system accounts
+    if (user.isSystem || user.protectedAccount) {
+      return res.status(403).json({
+        success: false,
+        message: 'Protected system accounts cannot be modified.',
+      });
+    }
+
+    // Prevent self-demotion
+    if (
+      req.user._id.toString() === user._id.toString() &&
+      role !== req.user.role
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot change your own role.',
+      });
+    }
+
+    // Only superuser can assign superuser
+    if (
+      role === 'superuser' &&
+      req.user.role !== 'superuser'
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only superusers can assign superuser role.',
+      });
+    }
+
+    // Only superuser can create admins
+    if (
+      role === 'admin' &&
+      req.user.role !== 'superuser'
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only superusers can assign admin role.',
+      });
+    }
+
+    user.role = role;
+
+    await user.save({
+      validateBeforeSave: false,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Role updated successfully.',
+      data: user,
+    });
+
+  } catch (err) {
+    next(err);
+  }
 };
 
 // PATCH /api/admin/users/:id/toggle-active
 exports.toggleActive = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
-    user.isActive = !user.isActive;
-    await user.save({ validateBeforeSave: false });
 
-    if (!user.isActive) {
-      await Employee.findOneAndUpdate({ user: user._id }, { status: 'terminated' });
-    } else {
-      await Employee.findOneAndUpdate({ user: user._id }, { status: 'active' });
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+      });
     }
 
-    res.status(200).json({ success: true, message: `User ${user.isActive ? 'activated' : 'deactivated'}.`, data: user });
-  } catch (err) { next(err); }
+    // Prevent modification of protected accounts
+    if (user.isSystem || user.protectedAccount) {
+      return res.status(403).json({
+        success: false,
+        message: 'Protected system accounts cannot be deactivated.',
+      });
+    }
+
+    // Prevent self-deactivation
+    if (
+      req.user._id.toString() === user._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot deactivate your own account.',
+      });
+    }
+
+    // Only superuser can deactivate admins
+    if (
+      user.role === 'admin' &&
+      req.user.role !== 'superuser'
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only superusers can deactivate admin accounts.',
+      });
+    }
+
+    user.isActive = !user.isActive;
+
+    await user.save({
+      validateBeforeSave: false,
+    });
+
+    if (!user.isActive) {
+      await Employee.findOneAndUpdate(
+        { user: user._id },
+        { status: 'terminated' }
+      );
+    } else {
+      await Employee.findOneAndUpdate(
+        { user: user._id },
+        { status: 'active' }
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `User ${
+        user.isActive
+          ? 'activated'
+          : 'deactivated'
+      }.`,
+      data: user,
+    });
+
+  } catch (err) {
+    next(err);
+  }
 };
 
 // --- DEPARTMENTS ---
