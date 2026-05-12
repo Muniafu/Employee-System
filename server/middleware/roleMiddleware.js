@@ -1,4 +1,5 @@
 const { ROLE_HIERARCHY } = require('../utils/roles');
+const {  ROLE_PERMISSIONS } = require('../utils/permissions');
 
 const authorize = (...roles) => {
   return (req, res, next) => {
@@ -12,7 +13,7 @@ const authorize = (...roles) => {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `Access denied. Requires: ${roles.join(', ')}`,
+        message: 'Forbidden.',
       });
     }
 
@@ -22,6 +23,25 @@ const authorize = (...roles) => {
 
 const authorizeMin = (minRole) => {
   return (req, res, next) => {
+    const userLevel =
+      ROLE_HIERARCHY[req.user.role] || 0;
+
+    const requiredLevel =
+      ROLE_HIERARCHY[minRole] || 0;
+
+    if (userLevel < requiredLevel) {
+      return res.status(403).json({
+        success: false,
+        message: 'Insufficient role level.',
+      });
+    }
+
+    next();
+  };
+};
+
+const authorizePermission = (...permissions) => {
+  return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -29,13 +49,18 @@ const authorizeMin = (minRole) => {
       });
     }
 
-    const userLevel = ROLE_HIERARCHY[req.user.role] || 0;
-    const requiredLevel = ROLE_HIERARCHY[minRole] || 0;
+    const userPermissions =
+      ROLE_PERMISSIONS[req.user.role] || [];
 
-    if (userLevel < requiredLevel) {
+    const allowed = permissions.every(
+      permission =>
+        userPermissions.includes(permission)
+    );
+
+    if (!allowed) {
       return res.status(403).json({
         success: false,
-        message: `Minimum role required: ${minRole}`,
+        message: 'Permission denied.',
       });
     }
 
@@ -46,4 +71,5 @@ const authorizeMin = (minRole) => {
 module.exports = {
   authorize,
   authorizeMin,
+  authorizePermission,
 };
