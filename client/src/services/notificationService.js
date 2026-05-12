@@ -1,27 +1,51 @@
 import api from './api';
 
-export const getNotifications = async (params = {}) => {
-  const { data } = await api.get('/notifications', {
-    params,
-  });
+export const getNotifications =
+  async (
+    params = {},
+    signal
+  ) => {
+    const { data } =
+      await api.get(
+        '/notifications',
+        {
+          params,
+          signal,
+        }
+      );
 
-  return data;
-};
+    return data;
+  };
 
-export const getUnreadCount = async () => {
-  const { data } = await api.get('/notifications/unread-count');
+export const getUnreadCount =
+  async (signal) => {
+    const { data } =
+      await api.get(
+        '/notifications/unread-count',
+        {
+          signal,
+        }
+      );
 
-  return data;
-};
+    return data;
+  };
 
-export const markAsRead = async (id) => {
-  const { data } = await api.patch(`/notifications/${id}/read`);
+export const markAsRead =
+  async (id) => {
+    const { data } =
+      await api.patch(
+        `/notifications/${id}/read`
+      );
 
-  return data;
-};
+    return data;
+  };
 
-export const markAllAsRead = async () => {
-  const { data } = await api.patch('/notifications/read-all');
+export const markAllAsRead =
+  async () => {
+    const { data } =
+      await api.patch(
+        '/notifications/read-all'
+      );
 
-  return data;
-};
+    return data;
+  };
