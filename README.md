@@ -1,7 +1,3 @@
-Here’s a comprehensive README.md template for your Employee Management System, summarizing all the major explanations and details from your repository:
-
----
-
 # Employee Management System
 
 A modern Employee Management System built with a React (Vite) frontend and Node.js/Express backend, designed to help organizations manage employee records, leave, and user access.
