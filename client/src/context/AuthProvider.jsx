@@ -1,113 +1,258 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from 'react';
+
+import { useNavigate }
+  from 'react-router-dom';
 
 import api from '../services/api';
-import AuthContext from './AuthContext';
 
-export default function AuthProvider({ children }) {
-  const navigate = useNavigate();
+import AuthContext
+  from './AuthContext';
 
-  const [user, setUser] = useState(() => {
+export default function AuthProvider({
+  children,
+}) {
+  const navigate =
+    useNavigate();
+
+  /*
+   STATE
+  */
+
+  const [user, setUser] =
+    useState(null);
+
+  const [token, setToken] =
+    useState(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  /*
+   LOGOUT
+   MUST COME BEFORE useEffect
+  */
+
+  const logout =
+    useCallback(() => {
+      localStorage.removeItem(
+        'ems_token'
+      );
+
+      localStorage.removeItem(
+        'ems_user'
+      );
+
+      setUser(null);
+
+      setToken(null);
+
+      navigate('/login', {
+        replace: true,
+      });
+    }, [navigate]);
+
+  /*
+   HYDRATE LOCAL STORAGE
+  */
+
+  useEffect(() => {
     try {
-      return JSON.parse(localStorage.getItem('ems_user'));
-    } catch {
-      return null;
+      const storedUser =
+        localStorage.getItem(
+          'ems_user'
+        );
+
+      const storedToken =
+        localStorage.getItem(
+          'ems_token'
+        );
+
+      if (
+        storedUser &&
+        storedToken
+      ) {
+        setUser(
+          JSON.parse(storedUser)
+        );
+
+        setToken(storedToken);
+      }
+    } catch (err) {
+      console.error(
+        'Auth hydration failed:',
+        err
+      );
+    } finally {
+      setLoading(false);
     }
-  });
-
-  const [token, setToken] = useState(
-    () => localStorage.getItem('ems_token')
-  );
-
-  const [loading, setLoading] = useState(true);
-
-  const persist = useCallback((u, t) => {
-    localStorage.setItem('ems_user', JSON.stringify(u));
-    localStorage.setItem('ems_token', t);
   }, []);
 
-  const clear = useCallback(() => {
-    setUser(null);
-    setToken(null);
+  /*
+   VERIFY TOKEN
+  */
 
-    localStorage.removeItem('ems_user');
-    localStorage.removeItem('ems_token');
-
-    delete api.defaults.headers.common.Authorization;
-    }, []);
-
-  // Verify current token
   useEffect(() => {
-    const verifyUser = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+    if (!token) return;
 
-      try {
-        const { data } = await api.get('/auth/me');
+    let mounted = true;
 
-        setUser(data.data.user);
+    const verifyUser =
+      async () => {
+        try {
+          const { data } =
+            await api.get(
+              '/auth/me'
+            );
 
-        persist(data.data.user, token);
-      } catch {
-        clear();
-      } finally {
-        setLoading(false);
-      }
-    };
+          if (!mounted) return;
+
+          setUser(
+            data.data.user
+          );
+
+          localStorage.setItem(
+            'ems_user',
+            JSON.stringify(
+              data.data.user
+            )
+          );
+        } catch (err) {
+          console.error(
+            'Auth verification failed:',
+            err
+          );
+
+          if (mounted) {
+            logout();
+          }
+        }
+      };
 
     verifyUser();
-  }, [token, persist, clear]);
 
-  const login = useCallback(async (email, password) => {
-    const { data } = await api.post('/auth/login', {
+    return () => {
+      mounted = false;
+    };
+  }, [token, logout]);
+
+  /*
+   LOGIN
+  */
+
+  const login =
+    useCallback(
+      async (
         email,
-        password,
-    });
+        password
+      ) => {
+        const { data } =
+          await api.post(
+            '/auth/login',
+            {
+              email,
+              password,
+            }
+          );
 
-    const authToken = data.data.token;
+        const authToken =
+          data.data.token;
 
-    setUser(data.data.user);
-    setToken(authToken);
+        const authUser =
+          data.data.user;
 
-    persist(data.data.user, authToken);
+        localStorage.setItem(
+          'ems_token',
+          authToken
+        );
 
-    return data.data.user;
-    }, [persist]);
+        localStorage.setItem(
+          'ems_user',
+          JSON.stringify(
+            authUser
+          )
+        );
 
-  const register = useCallback(async (payload) => {
-    const { data } = await api.post('/auth/register', payload);
+        setToken(authToken);
 
-    const authToken = data.data.token;
+        setUser(authUser);
 
-    setUser(data.data.user);
-    setToken(authToken);
+        return authUser;
+      },
+      []
+    );
 
-    persist(data.data.user, authToken);
+  /*
+   REGISTER
+  */
 
-    return data.data.user;
-    }, [persist]);
+  const register =
+    useCallback(
+      async (payload) => {
+        const { data } =
+          await api.post(
+            '/auth/register',
+            payload
+          );
 
-  const logout = useCallback(() => {
-    clear();
+        const authToken =
+          data.data.token;
 
-    navigate('/login', {
-      replace: true,
-    });
-  }, [clear, navigate]);
+        const authUser =
+          data.data.user;
 
-  const refreshUser = useCallback(async () => {
-    const { data } = await api.get('/auth/me');
+        localStorage.setItem(
+          'ems_token',
+          authToken
+        );
 
-    setUser(data.data.user);
+        localStorage.setItem(
+          'ems_user',
+          JSON.stringify(
+            authUser
+          )
+        );
 
-    if (token) {
-      persist(data.data.user, token);
-    }
-  }, [token, persist]);
+        setToken(authToken);
 
-  const isAdmin = ['admin', 'superuser'].includes(user?.role);
+        setUser(authUser);
+
+        return authUser;
+      },
+      []
+    );
+
+  /*
+   REFRESH USER
+  */
+
+  const refreshUser =
+    useCallback(async () => {
+      const { data } =
+        await api.get('/auth/me');
+
+      setUser(data.data.user);
+
+      localStorage.setItem(
+        'ems_user',
+        JSON.stringify(
+          data.data.user
+        )
+      );
+    }, []);
+
+  /*
+   ROLE FLAGS
+  */
+
+  const isAdmin = [
+    'admin',
+    'superuser',
+  ].includes(user?.role);
 
   const isHR = [
     'admin',
@@ -122,20 +267,47 @@ export default function AuthProvider({ children }) {
     'manager',
   ].includes(user?.role);
 
+  /*
+   CONTEXT VALUE
+  */
+
+  const value = useMemo(
+    () => ({
+      user,
+      token,
+      loading,
+
+      login,
+      register,
+      logout,
+
+      refreshUser,
+
+      isAdmin,
+      isHR,
+      isManager,
+    }),
+
+    [
+      user,
+      token,
+      loading,
+
+      login,
+      register,
+      logout,
+
+      refreshUser,
+
+      isAdmin,
+      isHR,
+      isManager,
+    ]
+  );
+
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        token,
-        loading,
-        login,
-        register,
-        logout,
-        refreshUser,
-        isAdmin,
-        isHR,
-        isManager,
-      }}
+      value={value}
     >
       {children}
     </AuthContext.Provider>
