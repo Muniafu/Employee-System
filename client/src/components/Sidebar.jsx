@@ -4,7 +4,13 @@ import { useAuth } from '../context/useAuth';
 const NAV = [
   {
     section: 'Main',
-    roles: ['employee', 'manager', 'hr'],
+    roles: [
+      'employee',
+      'manager',
+      'hr',
+      'admin',
+      'superuser',
+    ],
     links: [
       { to: '/dashboard', icon: '📊', label: 'Dashboard' },
       { to: '/attendance', icon: '⏱️', label: 'Attendance' },
@@ -15,7 +21,13 @@ const NAV = [
 
   {
     section: 'Development',
-    roles: ['employee', 'manager', 'hr'],
+    roles: [
+      'employee',
+      'manager',
+      'hr',
+      'admin',
+      'superuser',
+    ],
     links: [
       { to: '/performance', icon: '🎯', label: 'Performance' },
       { to: '/learning', icon: '📚', label: 'Learning' },
@@ -25,7 +37,7 @@ const NAV = [
 
   {
     section: 'Organisation',
-    roles: ['employee', 'manager', 'hr'],
+    roles: ['employee', 'manager', 'hr', 'admin', 'superuser'],
     links: [
       { to: '/engagement', icon: '🧠', label: 'Engagement' },
       { to: '/wellness', icon: '💪', label: 'Wellness' },
@@ -43,14 +55,6 @@ const NAV = [
       { to: '/admin', icon: '⚙️', label: 'Admin Panel' },
     ],
   },
-];
-
-const ADMIN_NAV = [
-  { section: 'Admin', links: [
-    { to: '/employees',   icon: '👥', label: 'Employees' },
-    { to: '/analytics',   icon: '📈', label: 'Analytics' },
-    { to: '/admin',       icon: '⚙️', label: 'Admin Panel' },
-  ]},
 ];
 
 export default function Sidebar({

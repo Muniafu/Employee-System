@@ -97,10 +97,15 @@ export default function Dashboard() {
     setLoading(true);
 
     try {
-      const requests = [
-        getLeaves({ status: 'pending' }),
-        getOnLeave()
-      ];
+      const requests = [];
+
+      if (isAdmin || isHR) {
+        requests.push(
+          getLeaves({ status: 'pending' })
+        );
+      }
+
+      requests.push(getOnLeave());
 
       /**
        * EMPLOYEE ATTENDANCE
@@ -119,14 +124,24 @@ export default function Dashboard() {
        * RESPONSE MAPPING
        */
       if (user?.role === 'employee') {
-        [attendRes, leaveRes, onLeaveRes] = responses;
+        attendRes = responses[0];
+        onLeaveRes = responses[1];
 
-        setTodayAttendance(attendRes?.data?.data || null);
+        setTodayAttendance(
+          attendRes?.data?.data || null
+        );
       } else {
-        [leaveRes, onLeaveRes] = responses;
+        leaveRes = responses[0];
+        onLeaveRes = responses[1];
       }
 
-      setPendingLeaves(leaveRes?.data?.data?.slice(0, 5) || []);
+      setPendingLeaves(
+        Array.isArray(
+          leaveRes?.data?.data
+        )
+          ? leaveRes.data.data.slice(0, 5)
+          : []
+      );
 
       setOnLeave(onLeaveRes?.data?.data || []);
 
