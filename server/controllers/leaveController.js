@@ -3,6 +3,7 @@ const Employee = require('../models/Employee');
 const { createNotification } = require('../utils/notificationService');
 const { sendEmail, templates } = require('../utils/emailService');
 const User = require('../models/User');
+const { getIO } = require( '../socket/socketManager' );
 
 // POST /api/leave
 exports.apply = async (req, res, next) => {
@@ -89,17 +90,28 @@ exports.approve = async (req, res, next) => {
     leave.approvedAt = new Date();
     leave.adminNote = req.body.adminNote || '';
     await leave.save();
+    try {
+
+      getIO().emit(
+      'leave:approved',
+      {
+      employee:
+      leave.employee._id,
+      }
+      );
+
+      } catch {}
 
     // Deduct balance
     const emp = await Employee.findById(leave.employee._id);
     if (emp && emp.leaveBalance[leave.leaveType] !== undefined) {
       emp.leaveBalance[leave.leaveType] = Math.max(0, emp.leaveBalance[leave.leaveType] - leave.totalDays);
-      emp.status = 'on_leave';
       await emp.save();
     }
 
     // Notify employee
     await createNotification({ recipient: leave.employee.user._id, type: 'leave', title: 'Leave Approved ✅', message: `Your ${leave.leaveType} leave has been approved.`, priority: 'medium' });
+    getIO().emit('leave:approved', { employee: leave.employee.user._id });
     sendEmail({ to: leave.employee.user.email, ...templates.leaveApproved(leave.employee.user.firstName, { start: leave.startDate, end: leave.endDate }) }).catch(() => {});
 
     res.status(200).json({ success: true, data: leave });
@@ -119,6 +131,17 @@ exports.reject = async (req, res, next) => {
     leave.approvedAt = new Date();
     leave.adminNote = req.body.adminNote || '';
     await leave.save();
+    try {
+
+      getIO().emit(
+      'leave:approved',
+      {
+      employee:
+      leave.employee._id,
+      }
+      );
+
+      } catch {}
 
     await createNotification({ recipient: leave.employee.user._id, type: 'leave', title: 'Leave Request Update', message: `Your ${leave.leaveType} leave was not approved. Check admin note.`, priority: 'medium' });
     sendEmail({ to: leave.employee.user.email, ...templates.leaveRejected(leave.employee.user.firstName, leave.adminNote) }).catch(() => {});
@@ -137,6 +160,17 @@ exports.cancel = async (req, res, next) => {
     if (leave.status !== 'pending') return res.status(400).json({ success: false, message: 'Only pending leaves can be cancelled.' });
     leave.status = 'cancelled';
     await leave.save();
+    try {
+
+      getIO().emit(
+      'leave:approved',
+      {
+      employee:
+      leave.employee._id,
+      }
+      );
+
+      } catch {}
     res.status(200).json({ success: true, data: leave });
   } catch (err) { next(err); }
 };

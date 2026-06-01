@@ -1,5 +1,16 @@
 const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
+const Leave = require('../models/Leave');
+const syncEmployeeLeaveStatus =
+require(
+'../utils/syncEmployeeLeaveStatus'
+);
+const {
+getIO,
+} =
+require(
+'../socket/socketManager'
+);
 
 // Kenya timezone-safe date
 const getTodayStr = () => {
@@ -12,49 +23,182 @@ const getTodayStr = () => {
   ).padStart(2, '0')}`;
 };
 
+const getKenyaDate = () => {
+  const now = new Date();
+
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Nairobi',
+  }).format(now);
+};
+
+const isEmployeeOnApprovedLeave =
+async (
+employeeId
+) => {
+
+const today =
+getKenyaDate();
+
+const leave =
+await Leave.findOne({
+employee:
+employeeId,
+
+status:
+'approved',
+})
+.lean();
+
+if (!leave) {
+return null;
+}
+
+const start =
+new Date(
+leave.startDate
+)
+.toLocaleDateString(
+'en-CA',
+{
+timeZone:
+'Africa/Nairobi',
+}
+);
+
+const end =
+new Date(
+leave.endDate
+)
+.toLocaleDateString(
+'en-CA',
+{
+timeZone:
+'Africa/Nairobi',
+}
+);
+
+if (
+today >= start &&
+today <= end
+) {
+return leave;
+}
+
+return null;
+
+};
+
 // POST /api/attendance/clock-in
 exports.clockIn = async (req, res, next) => {
   try {
     const employee = req.employee;
 
-    const today = getTodayStr();
+    await syncEmployeeLeaveStatus(
+      employee._id
+    );
 
-    const existing = await Attendance.findOne({
-      employee: employee._id,
-      date: today,
-    });
+    const activeLeave =
+      await isEmployeeOnApprovedLeave(
+      employee._id
+    );
+
+    if (activeLeave) {
+      await Attendance.updateOne(
+        {
+          employee: employee._id,
+          date: getKenyaDate(),
+        },
+        {
+          $setOnInsert: {
+            employee: employee._id,
+            date: getKenyaDate(),
+            status: 'on_leave',
+          },
+        },
+        {
+          upsert: true,
+        }
+      );
+
+      try {
+
+        getIO().emit(
+        'attendance:update',
+        {
+        employee:
+        employee._id,
+        }
+        );
+
+        } catch {}
+
+      return res.status(403).json({
+        success: false,
+        code: 'EMPLOYEE_ON_LEAVE',
+        message:
+          'Clock in unavailable during approved leave.',
+      });
+    }
+
+    const today = getKenyaDate();
+
+    const existing =
+      await Attendance.findOne({
+        employee: employee._id,
+        date: today,
+      });
 
     if (existing?.clockIn) {
       return res.status(409).json({
         success: false,
-        message: 'Already clocked in today.',
+        message:
+          'Attendance already recorded.',
       });
     }
 
     const now = new Date();
 
-    const workStart = new Date(now);
-    workStart.setHours(8, 0, 0, 0);
+    const workStart =
+      new Date(now);
 
-    const isLate = now > workStart;
+    workStart.setHours(
+      8,
+      0,
+      0,
+      0
+    );
 
-    const attendance = await Attendance.create({
-      employee: employee._id,
-      date: today,
-      clockIn: now,
-      status: 'present',
-      isLate,
-      location: req.body.location || 'office',
-      note: req.body.note || '',
-    });
+    const attendance =
+      await Attendance.findOneAndUpdate(
+        {
+          employee: employee._id,
+          date: today,
+        },
+        {
+          $setOnInsert: {
+            employee: employee._id,
+            date: today,
+            clockIn: now,
+            status: 'present',
+            isLate: now > workStart,
+            location:
+              req.body.location ||
+              'office',
+            note:
+              req.body.note || '',
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+        }
+      );
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
-      message: isLate
-        ? 'Clocked in successfully (Late)'
-        : 'Clocked in successfully',
       data: attendance,
     });
+
   } catch (err) {
     next(err);
   }
@@ -65,7 +209,24 @@ exports.clockOut = async (req, res, next) => {
   try {
     const employee = req.employee;
 
-    const today = getTodayStr();
+    const activeLeave =
+      await isEmployeeOnApprovedLeave(
+        employee._id
+      );
+
+      await syncEmployeeLeaveStatus(
+        employee._id
+      );
+
+    if (activeLeave) {
+      return res.status(403).json({
+        success: false,
+        message:
+          'Clock out disabled during approved leave.',
+      });
+    }
+
+    const today = getKenyaDate();
 
     const attendance = await Attendance.findOne({
       employee: employee._id,
@@ -95,6 +256,18 @@ exports.clockOut = async (req, res, next) => {
     }
 
     await attendance.save();
+
+    try {
+
+      getIO().emit(
+      'attendance:update',
+      {
+      employee:
+      employee._id,
+      }
+      );
+
+      } catch {}
 
     res.status(200).json({
       success: true,
@@ -152,9 +325,32 @@ exports.getToday = async (req, res, next) => {
   try {
     const employee = req.employee;
 
+    const leave =
+      await isEmployeeOnApprovedLeave(
+        employee._id
+      );
+
+      await syncEmployeeLeaveStatus(
+        employee._id
+      );
+
+    if (leave) {
+      return res.status(200).json({
+        success: true,
+        onLeave: true,
+        leave,
+        data: {
+          status:
+          'on_leave',
+        },
+        message:
+          'Employee currently on approved leave.',
+      });
+    }
+
     const record = await Attendance.findOne({
       employee: employee._id,
-      date: getTodayStr(),
+      date: getKenyaDate(),
     });
 
     return res.status(200).json({

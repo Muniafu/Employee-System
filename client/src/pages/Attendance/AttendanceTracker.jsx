@@ -37,6 +37,13 @@ import { useAuth }
 import Table
   from '../../components/Table';
 
+import {
+connectSocket,
+getSocket,
+}
+from
+'../../services/socket';
+
 const fmt = (d) =>
   d
     ? new Date(d).toLocaleTimeString(
@@ -69,6 +76,12 @@ export default function AttendanceTracker() {
   } = useAuth();
 
   const [today, setToday] =
+    useState(null);
+
+  const [onLeave, setOnLeave] =
+    useState(false);
+
+  const [leaveInfo, setLeaveInfo] =
     useState(null);
 
   const [records, setRecords] =
@@ -138,6 +151,16 @@ export default function AttendanceTracker() {
             || null
           );
 
+          setOnLeave(
+            todayRes?.data?.onLeave ||
+            false
+          );
+
+          setLeaveInfo(
+            todayRes?.data?.leave ||
+            null
+          );
+
           setRecords(
             myRes?.data?.data
             || []
@@ -193,6 +216,66 @@ export default function AttendanceTracker() {
     load();
   }, [load]);
 
+  useEffect(() => {
+
+    const token =
+    localStorage.getItem(
+    'token'
+    );
+
+    if (
+    !token
+    ||
+    !hasEmployeeProfile
+    ) {
+    return;
+    }
+
+    connectSocket(
+    token
+    );
+
+    const socket =
+    getSocket();
+
+    if (
+    !socket
+    ) {
+    return;
+    }
+
+    const refresh =
+    () => load();
+
+    socket.on(
+    'attendance:update',
+    refresh
+    );
+
+    socket.on(
+    'leave:approved',
+    refresh
+    );
+
+    return () => {
+
+    socket.off(
+    'attendance:update',
+    refresh
+    );
+
+    socket.off(
+    'leave:approved',
+    refresh
+    );
+
+    };
+
+    }, [
+    load,
+    hasEmployeeProfile,
+    ]);
+
   /**
    * ACTIONS
    */
@@ -200,69 +283,89 @@ export default function AttendanceTracker() {
   const handleClockIn =
     async () => {
 
-      setActing(true);
+    if (
+      acting ||
+      onLeave
+    ) return;
 
-      try {
+    setActing(true);
 
-        await clockIn({
-          note,
-        });
+    try {
 
-        toast.success(
-          'Clocked in successfully!'
-        );
+    await clockIn({
+    note,
+    });
 
-        setNote('');
+    await load();
 
-        load();
+    toast.success(
+    'Clocked in'
+    );
 
-      } catch (err) {
+    setNote('');
 
-        toast.error(
-          getError(err)
-        );
+    } catch (err) {
 
-      } finally {
-        setActing(false);
-      }
+    toast.error(
+    getError(err)
+    );
+
+    } finally {
+
+    setActing(false);
+
+    }
+
     };
 
   const handleClockOut =
     async () => {
 
-      setActing(true);
+    if (
+    acting ||
+    onLeave
+    ) return;
 
-      try {
+    setActing(true);
 
-        await clockOut({
-          note,
-        });
+    try {
 
-        toast.success(
-          'Clocked out successfully!'
-        );
+    await clockOut({
+    note,
+    });
 
-        setNote('');
+    await load();
 
-        load();
+    toast.success(
+    'Clocked out'
+    );
 
-      } catch (err) {
+    setNote('');
 
-        toast.error(
-          getError(err)
-        );
+    } catch (err) {
 
-      } finally {
-        setActing(false);
-      }
+    toast.error(
+    getError(err)
+    );
+
+    } finally {
+
+    setActing(false);
+
+    }
+
     };
 
   const canClockIn =
-    !today?.clockIn;
+    !onLeave &&
+    !today?.clockIn &&
+    !acting;
 
   const canClockOut =
+    !onLeave &&
     today?.clockIn &&
-    !today?.clockOut;
+    !today?.clockOut &&
+    !acting;
 
   const isComplete =
     today?.clockIn &&
@@ -374,11 +477,15 @@ export default function AttendanceTracker() {
                               : 'badge-neutral'
                         }`}
                       >
-                        {isComplete
-                          ? 'Complete'
-                          : today?.clockIn
-                            ? 'In Progress'
-                            : 'Not Started'}
+                        {
+                        onLeave
+                        ? 'On Leave'
+                        : isComplete
+                        ? 'Complete'
+                        : today?.clockIn
+                        ? 'In Progress'
+                        : 'Not Started'
+                        }
                       </span>
                     </div>
 
@@ -417,10 +524,7 @@ export default function AttendanceTracker() {
                       onClick={
                         handleClockIn
                       }
-                      disabled={
-                        !canClockIn ||
-                        acting
-                      }
+                      disabled={!canClockIn}
                     >
                       <Play size={16} />
                       Clock In
@@ -431,10 +535,7 @@ export default function AttendanceTracker() {
                       onClick={
                         handleClockOut
                       }
-                      disabled={
-                        !canClockOut ||
-                        acting
-                      }
+                      disabled={!canClockOut}
                     >
                       <Square size={16} />
                       Clock Out
@@ -567,6 +668,72 @@ export default function AttendanceTracker() {
       )}
 
       {/* TABLE */}
+
+      {
+      onLeave && (
+      <div
+      className="card"
+      style={{
+      marginBottom:16,
+      border:
+      '1px solid var(--warning)'
+      }}
+      >
+
+      <div
+      className="card-body"
+      >
+
+      <div
+      style={{
+      display:'flex',
+      justifyContent:
+      'space-between',
+      alignItems:
+      'center',
+      }}
+      >
+
+      <div>
+
+      <h3>
+      🏖️ Approved Leave
+      </h3>
+
+      <p>
+
+      Attendance disabled.
+
+      {
+      leaveInfo
+      &&
+      ` ${fmtDate(
+      leaveInfo.startDate
+      )}
+      → ${fmtDate(
+      leaveInfo.endDate
+      )}`
+
+      }
+
+      </p>
+
+      </div>
+
+      <span
+      className=
+      "badge badge-warning"
+      >
+      ON LEAVE
+      </span>
+
+      </div>
+
+      </div>
+
+      </div>
+      )
+      }
 
       <div className="card">
 
