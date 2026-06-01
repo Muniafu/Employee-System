@@ -42,6 +42,18 @@ const userSchema = new mongoose.Schema(
       default: 'employee',
     },
 
+    // ENTERPRISE ACCOUNT APPROVAL LIFECYCLE
+    status: {
+      type: String,
+      enum: [
+        'PENDING',
+        'APPROVED',
+        'REJECTED',
+        'SUSPENDED',
+      ],
+      default: 'PENDING',
+    },
+
     isActive: {
       type: Boolean,
       default: true,

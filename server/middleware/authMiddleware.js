@@ -1,26 +1,73 @@
-const { verifyToken } = require('../utils/token');
-const User = require('../models/User');
+const { verifyToken } =
+  require('../utils/token');
 
-const auth = async (req, res, next) => {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, message: 'No token provided. Access denied.' });
+const User =
+  require('../models/User');
+
+const Employee =
+  require('../models/Employee');
+
+const auth = async (
+  req,
+  res,
+  next
+) => {
+  const header =
+    req.headers.authorization;
+
+  if (
+    !header ||
+    !header.startsWith('Bearer ')
+  ) {
+    return res.status(401).json({
+      success: false,
+      message:
+        'No token provided. Access denied.',
+    });
   }
 
-  const token = header.split(' ')[1];
+  const token =
+    header.split(' ')[1];
+
   try {
-    const decoded = verifyToken(token);
-    const user = await User.findById(decoded.id).select('-password');
-    if (!user) return res.status(401).json({ success: false, message: 'User no longer exists.' });
-    if (!user.isActive) return res.status(403).json({ success: false, message: 'Account deactivated.' });
-    if (user.changedPasswordAfter(decoded.iat)) {
-      return res.status(401).json({ success: false, message: 'Password recently changed. Please log in again.' });
+    const decoded =
+      verifyToken(token);
+
+    const user =
+      await User.findById(
+        decoded.id
+      ).select('-password');
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message:
+          'User no longer exists.',
+      });
     }
-    req.user = user;
+
+    const employeeProfile =
+      await Employee.findOne({
+        user: user._id,
+      }).select('_id');
+
+    req.user = {
+      ...user.toObject(),
+
+      hasEmployeeProfile:
+        !!employeeProfile,
+
+      employeeId:
+        employeeProfile?._id || null,
+    };
+
     next();
+
   } catch (err) {
-    const msg = err.name === 'TokenExpiredError' ? 'Token expired.' : 'Invalid token.';
-    return res.status(401).json({ success: false, message: msg });
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid token.',
+    });
   }
 };
 

@@ -28,6 +28,7 @@ const createUserWithEmployee = async ({
   email,
   password,
   role = 'employee',
+  status = 'PENDING',
   department = '',
   position = '',
   phone = '',
@@ -48,6 +49,7 @@ const createUserWithEmployee = async ({
     email,
     password,
     role,
+    status,
   });
 
   await Employee.create({
@@ -132,6 +134,30 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    if (user.status === 'PENDING') {
+      return res.status(403).json({
+        success: false,
+        message:
+          'Your account is pending approval.',
+      });
+    }
+
+    if (user.status === 'REJECTED') {
+      return res.status(403).json({
+        success: false,
+        message:
+          'Your account request was rejected.',
+      });
+    }
+
+    if (user.status === 'SUSPENDED') {
+      return res.status(403).json({
+        success: false,
+        message:
+          'Your account has been suspended.',
+      });
+    }
+
     user.lastLogin = new Date();
 
     await user.save({
@@ -160,6 +186,17 @@ exports.getMe = async (req, res, next) => {
         employee,
       },
     });
+
+    if (
+      req.user.status !==
+      'APPROVED'
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          'Account not approved.',
+      });
+    }
 
   } catch (err) {
     next(err);
@@ -224,6 +261,7 @@ exports.registerAdmin = async (req, res, next) => {
       email,
       password,
       role: role || 'manager',
+      status: 'APPROVED',
       department,
       position,
       phone,

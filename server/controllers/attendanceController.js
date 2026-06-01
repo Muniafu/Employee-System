@@ -12,31 +12,10 @@ const getTodayStr = () => {
   ).padStart(2, '0')}`;
 };
 
-const getEmployeeOrFail = async (userId) => {
-
-  const employee = await Employee.findOne({
-    user: userId,
-  });
-
-  if (!employee) {
-
-    const err = new Error(
-      'Employee profile missing or corrupted. Contact administrator.'
-    );
-
-    err.statusCode = 422;
-
-    throw err;
-  }
-
-  return employee;
-};
-
 // POST /api/attendance/clock-in
 exports.clockIn = async (req, res, next) => {
   try {
-    const employee = await getEmployeeOrFail(req.user._id, res);
-    if (!employee) return;
+    const employee = req.employee;
 
     const today = getTodayStr();
 
@@ -84,8 +63,7 @@ exports.clockIn = async (req, res, next) => {
 // POST /api/attendance/clock-out
 exports.clockOut = async (req, res, next) => {
   try {
-    const employee = await getEmployeeOrFail(req.user._id, res);
-    if (!employee) return;
+    const employee = req.employee;
 
     const today = getTodayStr();
 
@@ -131,8 +109,7 @@ exports.clockOut = async (req, res, next) => {
 // GET /api/attendance/me
 exports.getMyAttendance = async (req, res, next) => {
   try {
-    const employee = await getEmployeeOrFail(req.user._id, res);
-    if (!employee) return;
+    const employee = req.employee;
 
     const now = new Date();
 
@@ -173,8 +150,7 @@ exports.getMyAttendance = async (req, res, next) => {
 // GET /api/attendance/today
 exports.getToday = async (req, res, next) => {
   try {
-    const employee = await getEmployeeOrFail(req.user._id, res);
-    if (!employee) return;
+    const employee = req.employee;
 
     const record = await Attendance.findOne({
       employee: employee._id,
