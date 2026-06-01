@@ -3,17 +3,24 @@ import { toast } from 'react-toastify';
 import {
   getAllUsers,
   changeRole,
-  toggleActive,
   getDepartments,
   getAuditLog,
-  registerAdmin
+  registerAdmin,
+  approveUser,
+  rejectUser,
+  suspendUser
 } from '../../services/adminService';
 
 import { getError } from '../../services/api';
 import Modal from '../Modal';
 import Table from '../Table';
 
-const ROLES = ['employee', 'manager', 'hr', 'admin', 'superuser'];
+const ROLES = [
+  'employee',
+  'manager',
+  'hr',
+  'admin'
+];
 const DEPTS = [
   'Engineering',
   'HR',
@@ -34,6 +41,8 @@ export default function AdminPanel() {
 
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+
+  const [statusFilter, setStatusFilter] = useState('');
 
   const [showAddAdmin, setShowAddAdmin] = useState(false);
 
@@ -59,7 +68,8 @@ export default function AdminPanel() {
     try {
       const { data } = await getAllUsers({
         search: search || undefined,
-        role: roleFilter || undefined
+        role: roleFilter || undefined,
+        status: statusFilter || undefined
       });
 
       setUsers(data.data || []);
@@ -68,7 +78,7 @@ export default function AdminPanel() {
     } finally {
       setLoading(false);
     }
-  }, [search, roleFilter]);
+  }, [search, roleFilter, statusFilter]);
 
   /**
    * USERS TAB
@@ -114,17 +124,17 @@ export default function AdminPanel() {
   /**
    * TOGGLE ACTIVE
    */
-  const handleToggle = async (userId) => {
-    try {
-      await toggleActive(userId);
+  // const handleToggle = async (userId) => {
+  //   try {
+  //     await toggleActive(userId);
 
-      toast.success('Status updated.');
+  //     toast.success('Status updated.');
 
-      loadUsers();
-    } catch (err) {
-      toast.error(getError(err));
-    }
-  };
+  //     loadUsers();
+  //   } catch (err) {
+  //     toast.error(getError(err));
+  //   }
+  // };
 
   /**
    * CREATE ADMIN / STAFF ACCOUNT
@@ -226,6 +236,7 @@ export default function AdminPanel() {
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
               >
+              
                 <option value="">All Roles</option>
 
                 {ROLES.map((r) => (
@@ -237,6 +248,34 @@ export default function AdminPanel() {
                     {r}
                   </option>
                 ))}
+              </select>
+              <select
+                className="form-control form-select"
+                style={{ width: 160 }}
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value)
+                }
+              >
+                <option value="">
+                  All Statuses
+                </option>
+
+                <option value="PENDING">
+                  Pending
+                </option>
+
+                <option value="APPROVED">
+                  Approved
+                </option>
+
+                <option value="REJECTED">
+                  Rejected
+                </option>
+
+                <option value="SUSPENDED">
+                  Suspended
+                </option>
               </select>
             </div>
           </div>
@@ -312,18 +351,27 @@ export default function AdminPanel() {
               },
 
               {
-                label: 'Status',
-                render: (u) => (
-                  <span
-                    className={`badge ${
-                      u.isActive
-                        ? 'badge-success'
-                        : 'badge-danger'
-                    }`}
-                  >
-                    {u.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                )
+              label: 'Account Status',
+                render: (u) => {
+
+                  const map = {
+                    PENDING: 'badge-warning',
+                    APPROVED: 'badge-success',
+                    REJECTED: 'badge-danger',
+                    SUSPENDED: 'badge-neutral',
+                  };
+
+                  return (
+                    <span
+                      className={`badge ${
+                        map[u.status] ||
+                        'badge-neutral'
+                      }`}
+                    >
+                      {u.status}
+                    </span>
+                  );
+                }
               },
 
               {
@@ -344,18 +392,94 @@ export default function AdminPanel() {
               },
 
               {
-                label: '',
+                label: 'Actions',
                 render: (u) => (
-                  <button
-                    className={`btn btn-sm ${
-                      u.isActive
-                        ? 'btn-outline'
-                        : 'btn-success'
-                    }`}
-                    onClick={() => handleToggle(u._id)}
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 8,
+                      flexWrap: 'wrap'
+                    }}
                   >
-                    {u.isActive ? 'Deactivate' : 'Activate'}
-                  </button>
+
+                    {u.status === 'PENDING' && (
+                      <>
+                        <button
+                          className="btn btn-success btn-sm"
+                          onClick={async () => {
+                            try {
+
+                              await approveUser(u._id);
+
+                              toast.success(
+                                'User approved.'
+                              );
+
+                              loadUsers();
+
+                            } catch (err) {
+
+                              toast.error(
+                                getError(err)
+                              );
+                            }
+                          }}
+                        >
+                          Approve
+                        </button>
+
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={async () => {
+                            try {
+
+                              await rejectUser(u._id);
+
+                              toast.success(
+                                'User rejected.'
+                              );
+
+                              loadUsers();
+
+                            } catch (err) {
+
+                              toast.error(
+                                getError(err)
+                              );
+                            }
+                          }}
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+
+                    {u.status === 'APPROVED' && (
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={async () => {
+                          try {
+
+                            await suspendUser(u._id);
+
+                            toast.success(
+                              'User suspended.'
+                            );
+
+                            loadUsers();
+
+                          } catch (err) {
+
+                            toast.error(
+                              getError(err)
+                            );
+                          }
+                        }}
+                      >
+                        Suspend
+                      </button>
+                    )}
+                  </div>
                 )
               }
             ]}

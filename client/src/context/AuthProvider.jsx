@@ -19,9 +19,9 @@ export default function AuthProvider({
   const navigate =
     useNavigate();
 
-  /*
-   STATE
-  */
+  /**
+   * STATE
+   */
 
   const [user, setUser] =
     useState(null);
@@ -32,10 +32,9 @@ export default function AuthProvider({
   const [loading, setLoading] =
     useState(true);
 
-  /*
-   LOGOUT
-   MUST COME BEFORE useEffect
-  */
+  /**
+   * LOGOUT
+   */
 
   const logout =
     useCallback(() => {
@@ -56,9 +55,9 @@ export default function AuthProvider({
       });
     }, [navigate]);
 
-  /*
-   HYDRATE LOCAL STORAGE
-  */
+  /**
+   * HYDRATE STORAGE
+   */
 
   useEffect(() => {
     try {
@@ -82,19 +81,21 @@ export default function AuthProvider({
 
         setToken(storedToken);
       }
+
     } catch (err) {
       console.error(
         'Auth hydration failed:',
         err
       );
+
     } finally {
       setLoading(false);
     }
   }, []);
 
-  /*
-   VERIFY TOKEN
-  */
+  /**
+   * VERIFY SESSION
+   */
 
   useEffect(() => {
     if (!token) return;
@@ -111,16 +112,16 @@ export default function AuthProvider({
 
           if (!mounted) return;
 
-          setUser(
-            data.data.user
-          );
+          const authUser =
+            data.data.user;
+
+          setUser(authUser);
 
           localStorage.setItem(
             'ems_user',
-            JSON.stringify(
-              data.data.user
-            )
+            JSON.stringify(authUser)
           );
+
         } catch (err) {
           console.error(
             'Auth verification failed:',
@@ -140,9 +141,9 @@ export default function AuthProvider({
     };
   }, [token, logout]);
 
-  /*
-   LOGIN
-  */
+  /**
+   * LOGIN
+   */
 
   const login =
     useCallback(
@@ -172,9 +173,7 @@ export default function AuthProvider({
 
         localStorage.setItem(
           'ems_user',
-          JSON.stringify(
-            authUser
-          )
+          JSON.stringify(authUser)
         );
 
         setToken(authToken);
@@ -186,68 +185,48 @@ export default function AuthProvider({
       []
     );
 
-  /*
-   REGISTER
-  */
+  /**
+   * REGISTER
+   */
 
   const register =
-    useCallback(
-      async (payload) => {
-        const { data } =
-          await api.post(
-            '/auth/register',
-            payload
-          );
+  useCallback(
+    async (payload) => {
 
-        const authToken =
-          data.data.token;
-
-        const authUser =
-          data.data.user;
-
-        localStorage.setItem(
-          'ems_token',
-          authToken
+      const { data } =
+        await api.post(
+          '/auth/register',
+          payload
         );
 
-        localStorage.setItem(
-          'ems_user',
-          JSON.stringify(
-            authUser
-          )
-        );
+      return data;
+    },
+    []
+  );
 
-        setToken(authToken);
-
-        setUser(authUser);
-
-        return authUser;
-      },
-      []
-    );
-
-  /*
-   REFRESH USER
-  */
+  /**
+   * REFRESH USER
+   */
 
   const refreshUser =
     useCallback(async () => {
       const { data } =
         await api.get('/auth/me');
 
-      setUser(data.data.user);
+      const authUser =
+        data.data.user;
+
+      setUser(authUser);
 
       localStorage.setItem(
         'ems_user',
-        JSON.stringify(
-          data.data.user
-        )
+        JSON.stringify(authUser)
       );
     }, []);
 
-  /*
-   ROLE FLAGS
-  */
+  /**
+   * ROLE FLAGS
+   */
 
   const isAdmin = [
     'admin',
@@ -267,9 +246,16 @@ export default function AuthProvider({
     'manager',
   ].includes(user?.role);
 
-  /*
-   CONTEXT VALUE
-  */
+  /**
+   * ENTERPRISE CAPABILITY
+   */
+
+  const hasEmployeeProfile =
+    user?.hasEmployeeProfile === true;
+
+  /**
+   * CONTEXT VALUE
+   */
 
   const value = useMemo(
     () => ({
@@ -286,6 +272,8 @@ export default function AuthProvider({
       isAdmin,
       isHR,
       isManager,
+
+      hasEmployeeProfile,
     }),
 
     [
@@ -302,6 +290,8 @@ export default function AuthProvider({
       isAdmin,
       isHR,
       isManager,
+
+      hasEmployeeProfile,
     ]
   );
 

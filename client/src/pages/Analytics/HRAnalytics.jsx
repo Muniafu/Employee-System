@@ -1,6 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+import {
+  BarChart3,
+  Users,
+  CheckCircle2,
+  Plane,
+  TrendingDown,
+  AlertTriangle,
+  PartyPopper,
+} from 'lucide-react';
 import { getDashboard, getHeadcount, getTurnover } from '../../services/analyticsService';
 import { getError } from '../../services/api';
 
@@ -47,7 +67,22 @@ export default function HRAnalytics() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">HR Analytics 📈</h1>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10
+            }}
+          >
+            <BarChart3
+              size={28}
+              color="var(--primary)"
+            />
+
+            <h1 className="page-title">
+              HR Analytics
+            </h1>
+          </div>
           <p className="page-subtitle">Real-time workforce intelligence</p>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -59,10 +94,37 @@ export default function HRAnalytics() {
       {/* Top Stats */}
       <div className="grid-4" style={{ marginBottom:24 }}>
         {[
-          { label:'Total Employees', value: headcount?.total, icon:'👥', color:'var(--primary)', bg:'var(--primary-light)' },
-          { label:'Active', value: headcount?.active, icon:'✅', color:'var(--success)', bg:'var(--success-light)' },
-          { label:'On Leave', value: headcount?.onLeave, icon:'🏖️', color:'var(--warning)', bg:'var(--warning-light)' },
-          { label:'Turnover Rate', value: turnover?.turnoverRate, icon:'📉', color:'var(--danger)', bg:'var(--danger-light)' },
+          {
+            label: 'Total Employees',
+            value: headcount?.total,
+            icon: <Users size={20} />,
+            color: 'var(--primary)',
+            bg: 'var(--primary-light)'
+          },
+
+          {
+            label: 'Active',
+            value: headcount?.active,
+            icon: <CheckCircle2 size={20} />,
+            color: 'var(--success)',
+            bg: 'var(--success-light)'
+          },
+
+          {
+            label: 'On Leave',
+            value: headcount?.onLeave,
+            icon: <Plane size={20} />,
+            color: 'var(--warning)',
+            bg: 'var(--warning-light)'
+          },
+
+          {
+            label: 'Turnover Rate',
+            value: turnover?.turnoverRate,
+            icon: <TrendingDown size={20} />,
+            color: 'var(--danger)',
+            bg: 'var(--danger-light)'
+          },
         ].map(s => (
           <div key={s.label} className="stat-card">
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
@@ -131,7 +193,20 @@ export default function HRAnalytics() {
             ) : <div className="empty-state" style={{ padding:'20px 0' }}><p>No attendance data for this period.</p></div>}
             {dash?.attendance?.lateCount != null && (
               <div style={{ marginTop:12, padding:'8px 12px', background:'var(--warning-light)', borderRadius:8, fontSize:12, color:'var(--warning)' }}>
-                ⚠️ {dash.attendance.lateCount} late arrivals · Avg {dash.attendance.avgHoursWorked}h/day
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8
+                  }}
+                >
+                  <AlertTriangle size={16} />
+
+                  <span>
+                    {dash.attendance.lateCount} late arrivals · Avg{' '}
+                    {dash.attendance.avgHoursWorked}h/day
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -183,7 +258,20 @@ export default function HRAnalytics() {
                     <span className="badge badge-danger">{d.count} left</span>
                   </div>
                 ))
-              : <div className="empty-state" style={{ padding:'20px 0' }}><p>🎉 No terminations recorded.</p></div>
+              : <div className="empty-state" style={{ padding:'20px 0' }}><div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      color: 'var(--success)'
+                    }}
+                  >
+                    <PartyPopper size={18} />
+
+                    <p>No terminations recorded.</p>
+                  </div>
+                </div>
             }
             <div style={{ marginTop:12, padding:'8px 12px', background:'var(--primary-light)', borderRadius:8, fontSize:12, color:'var(--primary)' }}>
               Overall turnover rate: <strong>{turnover?.turnoverRate || '0%'}</strong> ({turnover?.terminated||0} of {turnover?.total||0} employees)

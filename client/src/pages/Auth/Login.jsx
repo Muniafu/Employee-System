@@ -1,5 +1,17 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import {
+  Eye,
+  EyeOff,
+  Clock3,
+  Plane,
+  Wallet,
+  BarChart3,
+  Target,
+  BookOpen,
+  Dumbbell,
+  ClipboardList,
+} from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/useAuth';
 import { getError } from '../../services/api';
@@ -29,15 +41,54 @@ export default function Login() {
 
   const handleRegister = async e => {
     e.preventDefault();
-    if (regForm.password.length < 6) return toast.error('Password must be at least 6 characters.');
+
+    if (regForm.password.length < 6) {
+      return toast.error(
+        'Password must be at least 6 characters.'
+      );
+    }
+
     setLoading(true);
+
     try {
-      await register(regForm);
-      toast.success('Account created! Welcome aboard 🎉');
-      navigate('/dashboard');
+
+      const response =
+        await register(regForm);
+
+      toast.info(
+        response.message ||
+        'Registration submitted. Await administrator approval.'
+      );
+
+      /**
+       * Reset form
+       */
+
+      setRegForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+        department: '',
+        position: '',
+        phone: '',
+      });
+
+      /**
+       * Return to login tab
+       */
+
+      setTab('login');
+
     } catch (err) {
+
       toast.error(getError(err));
-    } finally { setLoading(false); }
+
+    } finally {
+
+      setLoading(false);
+
+    }
   };
 
   const DEPTS = ['Engineering','HR','Finance','Marketing','Operations','Sales','Legal','Other'];
@@ -47,16 +98,27 @@ export default function Login() {
       <div className="auth-left">
         <div className="auth-card">
           {/* Logo */}
-          <div style={{ textAlign:'center', marginBottom:28 }}>
-            <div style={{ width:52, height:52, background:'var(--primary)', borderRadius:14, display:'grid', placeItems:'center', margin:'0 auto 12px', color:'#fff', fontSize:24, fontWeight:800 }}>E</div>
-            <h2 style={{ fontWeight:800, fontSize:22, marginBottom:4 }}>EMS Unified HR</h2>
-            <p style={{ color:'#64748b', fontSize:13 }}>Transactional & Transformational</p>
+          <div className="auth-brand">
+            <div className="auth-logo">E</div>
+            <h2 className="auth-heading">EMS Unified HR</h2>
+            <p className="auth-subheading">Transactional & Transformational</p>
           </div>
 
           {/* Tabs */}
-          <div className="tabs" style={{ marginBottom:20, width:'100%', justifyContent:'center' }}>
-            <button className={`tab ${tab==='login'?'active':''}`} onClick={() => setTab('login')}>Sign In</button>
-            <button className={`tab ${tab==='register'?'active':''}`} onClick={() => setTab('register')}>Register</button>
+          <div className="auth-tabs">
+            <button
+              className={`auth-tab ${tab === 'login' ? 'active' : ''}`}
+              onClick={() => setTab('login')}
+            >
+              Sign In
+            </button>
+
+            <button
+              className={`auth-tab ${tab === 'register' ? 'active' : ''}`}
+              onClick={() => setTab('register')}
+            >
+              Register
+            </button>
           </div>
 
           {tab === 'login' ? (
@@ -70,7 +132,11 @@ export default function Login() {
                 <div style={{ position:'relative' }}>
                   <input className="form-control" type={showPass?'text':'password'} placeholder="••••••••" value={loginForm.password} onChange={e => setLoginForm(p=>({...p,password:e.target.value}))} required style={{ paddingRight:40 }} />
                   <button type="button" onClick={() => setShowPass(s=>!s)} style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:'var(--text-muted)', fontSize:16 }}>
-                    {showPass ? '🙈' : '👁️'}
+                    {showPass ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
                   </button>
                 </div>
               </div>
@@ -78,10 +144,18 @@ export default function Login() {
                 {loading ? <span className="spinner" style={{ width:16, height:16, borderWidth:2 }} /> : null}
                 {loading ? ' Signing in…' : 'Sign In'}
               </button>
-              <div style={{ marginTop:16, padding:12, background:'#f1f5f9', borderRadius:8, fontSize:12, color:'#64748b' }}>
-                <strong>Test accounts:</strong><br/>
-                admin@ems.com / Admin@1234<br/>
-                emp1@ems.com / Admin@1234
+              <div
+                style={{
+                  marginTop: 16,
+                  padding: 12,
+                  borderRadius: 8,
+                  background: 'rgba(59,130,246,.08)',
+                  border: '1px solid rgba(59,130,246,.15)',
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                }}
+              >
+                New employee registrations require administrator approval before access is granted.
               </div>
             </form>
           ) : (
@@ -121,6 +195,19 @@ export default function Login() {
                 {loading ? <span className="spinner" style={{ width:16, height:16, borderWidth:2 }} /> : null}
                 {loading ? ' Creating…' : 'Create Account'}
               </button>
+              <div
+                style={{
+                  marginTop: 16,
+                  padding: 12,
+                  borderRadius: 8,
+                  background: 'rgba(59,130,246,.08)',
+                  border: '1px solid rgba(59,130,246,.15)',
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                }}
+              >
+                New employee registrations require administrator approval before access is granted.
+              </div>
             </form>
           )}
         </div>
@@ -131,9 +218,70 @@ export default function Login() {
           From attendance tracking and payroll to performance reviews and wellness programs — everything your organisation needs in one platform.
         </p>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-          {['⏱️ Attendance','🏖️ Leave','💰 Payroll','📊 Analytics','🎯 Performance','📚 Learning','💪 Wellness','📋 Compliance'].map(f => (
-            <div key={f} style={{ background:'rgba(255,255,255,.15)', borderRadius:10, padding:'10px 14px', fontSize:13, fontWeight:600 }}>{f}</div>
-          ))}
+          {[
+            {
+              label: 'Attendance',
+              icon: Clock3,
+            },
+
+            {
+              label: 'Leave',
+              icon: Plane,
+            },
+
+            {
+              label: 'Payroll',
+              icon: Wallet,
+            },
+
+            {
+              label: 'Analytics',
+              icon: BarChart3,
+            },
+
+            {
+              label: 'Performance',
+              icon: Target,
+            },
+
+            {
+              label: 'Learning',
+              icon: BookOpen,
+            },
+
+            {
+              label: 'Wellness',
+              icon: Dumbbell,
+            },
+
+            {
+              label: 'Compliance',
+              icon: ClipboardList,
+            },
+          ].map(feature => {
+            const Icon = feature.icon;
+
+            return (
+              <div
+                key={feature.label}
+                style={{
+                  background:
+                    'rgba(255,255,255,.15)',
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+              >
+                <Icon size={16} />
+
+                <span>{feature.label}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

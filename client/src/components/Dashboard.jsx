@@ -9,6 +9,15 @@ import { getError } from '../services/api';
 
 import { toast } from 'react-toastify';
 
+import {
+  Clock3,
+  Plane,
+  Hourglass,
+  Users,
+  ArrowRight,
+  CheckCircle2,
+} from 'lucide-react';
+
 const Stat = ({ icon, label, value, sub, color, bg, to }) => {
   const inner = (
     <div
@@ -110,8 +119,10 @@ export default function Dashboard() {
       /**
        * EMPLOYEE ATTENDANCE
        */
-      if (user?.role === 'employee') {
-        requests.unshift(getTodayStatus());
+      if (user?.hasEmployeeProfile) {
+        requests.unshift(
+          getTodayStatus()
+        );
       }
 
       const responses = await Promise.all(requests);
@@ -123,7 +134,7 @@ export default function Dashboard() {
       /**
        * RESPONSE MAPPING
        */
-      if (user?.role === 'employee') {
+      if (user?.hasEmployeeProfile) {
         attendRes = responses[0];
         onLeaveRes = responses[1];
 
@@ -158,7 +169,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user?.role, isAdmin, isHR]);
+  }, [isAdmin, isHR, user?.hasEmployeeProfile]);
 
   /**
    * INITIAL LOAD
@@ -184,7 +195,22 @@ export default function Dashboard() {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            Welcome back, {user?.firstName}! 👋
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10
+              }}
+            >
+              <CheckCircle2
+                size={24}
+                color="var(--primary)"
+              />
+
+              <span>
+                Welcome back, {user?.firstName}!
+              </span>
+            </div>
           </h1>
 
           <p className="page-subtitle">
@@ -204,7 +230,7 @@ export default function Dashboard() {
         style={{ marginBottom: 24 }}
       >
         <Stat
-          icon="⏱️"
+          icon={<Clock3 size={22} />}
           label="Today"
           value={
             todayAttendance
@@ -219,7 +245,7 @@ export default function Dashboard() {
         />
 
         <Stat
-          icon="🏖️"
+          icon={<Plane size={22} />}
           label="On Leave"
           value={onLeave.length}
           color="var(--warning)"
@@ -228,7 +254,7 @@ export default function Dashboard() {
         />
 
         <Stat
-          icon="⏳"
+          icon={<Hourglass size={22} />}
           label="Pending Requests"
           value={pendingLeaves.length}
           color="var(--danger)"
@@ -238,7 +264,7 @@ export default function Dashboard() {
 
         {(isAdmin || isHR) && data && (
           <Stat
-            icon="👥"
+            icon={<Users size={22} />}
             label="Total Employees"
             value={data.headcount?.total}
             color="var(--success)"
@@ -264,7 +290,17 @@ export default function Dashboard() {
                 fontWeight: 600
               }}
             >
-              View all →
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                <span>View all</span>
+
+                <ArrowRight size={14} />
+              </div>
             </Link>
           </div>
 
@@ -278,7 +314,19 @@ export default function Dashboard() {
                 className="empty-state"
                 style={{ padding: '20px 0' }}
               >
-                <p>No one is on leave today 🎉</p>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    color: 'var(--success)'
+                  }}
+                >
+                  <CheckCircle2 size={18} />
+
+                  <p>No one is on leave today</p>
+                </div>
               </div>
             ) : (
               onLeave.map((l) => (
@@ -349,7 +397,17 @@ export default function Dashboard() {
                 fontWeight: 600
               }}
             >
-              Manage →
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                <span>Manage</span>
+
+                <ArrowRight size={14} />
+              </div>
             </Link>
           </div>
 
