@@ -1,62 +1,116 @@
 const nodemailer = require('nodemailer');
-const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, NODE_ENV } = require('../config/env');
+const {
+  SMTP_HOST,
+  SMTP_PORT,
+  SMTP_USER,
+  SMTP_PASS,
+} = require('../config/env');
 const logger = require('./logger');
+const transporter = nodemailer.createTransport({
+  host: SMTP_HOST,
+  port: Number(SMTP_PORT),
+  secure: false,
+  auth: {
+    user: SMTP_USER,
+    pass: SMTP_PASS,
+  },
+});
 
-let transporter;
-
-try {
-  transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: false,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
-    tls: { rejectUnauthorized: false },
-  });
-} catch (err) {
-  logger.warn('Email transporter failed to initialise — emails disabled.');
-}
-
-const sendEmail = async ({ to, subject, html, text }) => {
-  if (NODE_ENV === 'development') {
-    logger.info(`📧 [DEV] Email suppressed — To: ${to} | Subject: ${subject}`);
-    return { suppressed: true };
+transporter.verify((error) => {
+  if (error) {
+    logger.error(`SMTP Verification Failed: ${error.message}`);
+  } else {
+    logger.info('✅ SMTP Server Ready');
   }
-  if (!transporter) {
-    logger.warn('Email transporter not available.');
-    return { error: 'No transporter' };
-  }
+});
+
+const sendEmail = async ({
+  to,
+  subject,
+  html,
+  text,
+}) => {
   try {
+    logger.info(
+      `📧 Attempting email -> ${to} | Subject: ${subject}`
+    );
+
     const info = await transporter.sendMail({
       from: `"EMS System" <${SMTP_USER}>`,
-      to, subject,
-      html: html || `<p>${text}</p>`,
-      text: text || '',
+      to,
+      subject,
+      html,
+      text,
     });
-    logger.info(`📧 Email sent: ${info.messageId}`);
-    return info;
+
+    logger.info(
+      `✅ Email Sent: ${info.messageId}`
+    );
+
+    return {
+      success: true,
+      info,
+    };
   } catch (err) {
-    logger.error(`📧 Email failed: ${err.message}`);
-    return { error: err.message }; // Don't throw — email failure ≠ request failure
+    logger.error(
+      `❌ Email Failed: ${err.message}`
+    );
+
+    return {
+      success: false,
+      error: err.message,
+    };
   }
 };
 
 const templates = {
   leaveApproved: (name, dates) => ({
     subject: 'Leave Request Approved ✅',
-    html: `<h3>Hi ${name},</h3><p>Your leave from <b>${dates.start}</b> to <b>${dates.end}</b> has been <b>approved</b>.</p>`,
+    html: `
+      <h2>Leave Approved</h2>
+      <p>Hello ${name},</p>
+      <p>Your leave request has been approved.</p>
+      <p>
+        <strong>Start:</strong> ${new Date(dates.start).toLocaleDateString()}
+      </p>
+      <p>
+        <strong>End:</strong> ${new Date(dates.end).toLocaleDateString()}
+      </p>
+    `,
   }),
+
   leaveRejected: (name, reason) => ({
-    subject: 'Leave Request Update',
-    html: `<h3>Hi ${name},</h3><p>Your leave request was <b>rejected</b>. Reason: ${reason || 'See admin note.'}</p>`,
+    subject: 'Leave Request Rejected',
+    html: `
+      <h2>Leave Request Update</h2>
+      <p>Hello ${name},</p>
+      <p>Your leave request was rejected.</p>
+      <p><strong>Reason:</strong> ${reason || 'No reason provided'}</p>
+    `,
   }),
-  payrollFinalized: (name, period, netPay) => ({
-    subject: `Payslip Ready — ${period}`,
-    html: `<h3>Hi ${name},</h3><p>Your payslip for <b>${period}</b> is ready. Net Pay: <b>${netPay}</b>.</p>`,
+
+  payrollFinalized: (
+    name,
+    period,
+    netPay
+  ) => ({
+    subject: `Payslip Ready - ${period}`,
+    html: `
+      <h2>Payslip Available</h2>
+      <p>Hello ${name},</p>
+      <p>Your payroll for ${period} has been finalized.</p>
+      <p><strong>Net Pay:</strong> ${netPay}</p>
+    `,
   }),
+
   welcome: (name) => ({
-    subject: 'Welcome to the Team! 🎉',
-    html: `<h3>Hi ${name},</h3><p>Welcome aboard! Your account is set up. Please log in to complete your onboarding.</p>`,
+    subject: 'Welcome to EMS',
+    html: `
+      <h2>Welcome</h2>
+      <p>Hello ${name},</p>
+      <p>Your account has been created successfully.</p>
+    `,
   }),
 };
 
-module.exports = { sendEmail, templates };
+module.exports = { sendEmail, templates, };

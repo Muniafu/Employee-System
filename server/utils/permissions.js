@@ -1,49 +1,63 @@
-const PERMISSIONS = {
-  VIEW_SELF_PROFILE: 'view_self_profile',
-  VIEW_EMPLOYEES: 'view_employees',
-  MANAGE_EMPLOYEES: 'manage_employees',
+const PERMISSIONS={
 
-  VIEW_PAYROLL: 'view_payroll',
-  MANAGE_PAYROLL: 'manage_payroll',
+VIEW_SELF_PROFILE:
+'view_self_profile',
 
-  VIEW_ANALYTICS: 'view_analytics',
+VIEW_OWN_PAYROLL:
+'view_own_payroll',
 
-  MANAGE_POLICIES: 'manage_policies',
+VIEW_PAYROLL:
+'view_payroll',
 
-  MANAGE_SYSTEM: 'manage_system',
+FINALIZE_PAYROLL:
+'finalize_payroll',
 
-  MANAGE_ROLES: 'manage_roles',
+EXPORT_PAYROLL:
+'export_payroll',
 
-  ACCESS_AUDIT_LOGS: 'access_audit_logs',
+MANAGE_EMPLOYEES:
+'manage_employees',
+
 };
 
-const ROLE_PERMISSIONS = {
-  employee: [
-    PERMISSIONS.VIEW_SELF_PROFILE,
-  ],
+const ROLE_PERMISSIONS={
 
-  manager: [
-    PERMISSIONS.VIEW_SELF_PROFILE,
-    PERMISSIONS.VIEW_EMPLOYEES,
-  ],
+employee:[
+PERMISSIONS
+.VIEW_SELF_PROFILE,
 
-  hr: [
-    PERMISSIONS.VIEW_SELF_PROFILE,
-    PERMISSIONS.VIEW_EMPLOYEES,
-    PERMISSIONS.MANAGE_EMPLOYEES,
-    PERMISSIONS.VIEW_PAYROLL,
-  ],
+PERMISSIONS
+.VIEW_OWN_PAYROLL,
+],
 
-  admin: [
-    ...Object.values(PERMISSIONS),
-  ],
+manager:[
+PERMISSIONS
+.VIEW_SELF_PROFILE,
+],
 
-  superuser: [
-    ...Object.values(PERMISSIONS),
-  ],
+hr:[
+PERMISSIONS
+.VIEW_PAYROLL,
+
+PERMISSIONS
+.FINALIZE_PAYROLL,
+],
+
+admin:
+Object
+.values(
+PERMISSIONS
+),
+
+superuser:
+Object
+.values(
+PERMISSIONS
+),
+
 };
 
-module.exports = {
-  PERMISSIONS,
-  ROLE_PERMISSIONS,
+module.exports={
+PERMISSIONS,
+ROLE_PERMISSIONS,
 };
