@@ -16,8 +16,26 @@ const getIO = () => {
   return ioInstance;
 };
 
+const getUserSocket = (userId) => {
+  return onlineUsers.get(
+    userId.toString()
+  );
+};
+
+const getUserSockets = (userId) => {
+  const socketId = onlineUsers.get(
+    userId.toString()
+  );
+
+  return socketId
+    ? [socketId]
+    : [];
+};
+
 module.exports = {
   setIO,
   getIO,
   onlineUsers,
+  getUserSocket,
+  getUserSockets,
 };
