@@ -83,7 +83,7 @@ io.use((socket, next) => {
 
 io.on('connection', (socket) => {
   onlineUsers.set(
-    socket.userId,
+    socket.userId.toString(),
     socket.id
   );
 
@@ -93,7 +93,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     onlineUsers.delete(
-      socket.userId
+      socket.userId.toString()
     );
 
     logger.info(
