@@ -1,14 +1,80 @@
-const router = require('express').Router();
-const c = require('../controllers/payrollController');
-const auth = require('../middleware/authMiddleware');
-const { authorize } = require('../middleware/roleMiddleware');
+const router=
+require('express')
+.Router();
 
-router.use(auth);
+const auth=
+require(
+'../middleware/authMiddleware'
+);
 
-router.get('/me', c.getMyPayroll);
-router.post('/preview', authorize('admin', 'superuser', 'hr'), c.preview);
-router.post('/finalize', authorize('admin', 'superuser', 'hr'), c.finalize);
-router.get('/all', authorize('admin', 'superuser', 'hr'), c.getAll);
-router.get('/:id', c.getOne);
+const {
+authorize,
+}=
+require(
+'../middleware/roleMiddleware'
+);
 
-module.exports = router;
+const c=
+require(
+'../controllers/payrollController'
+);
+
+router.use(
+auth
+);
+
+router.get(
+'/me',
+c.getMyPayroll
+);
+
+router.post(
+'/preview',
+
+authorize(
+'admin',
+'superuser',
+'hr'
+),
+
+c.preview
+);
+
+router.post(
+'/finalize',
+
+authorize(
+'admin',
+'superuser',
+'hr'
+),
+
+c.finalize
+);
+
+router.get(
+'/all',
+
+authorize(
+'admin',
+'superuser',
+'hr'
+),
+
+c.getAll
+);
+
+router.get(
+'/:id',
+
+authorize(
+'admin',
+'superuser',
+'hr',
+'employee'
+),
+
+c.getOne
+);
+
+module.exports= router;
