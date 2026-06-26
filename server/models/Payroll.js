@@ -1,46 +1,146 @@
-const mongoose = require('mongoose');
+const mongoose =
+require('mongoose');
 
-const payrollSchema = new mongoose.Schema({
-  employee:      { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
-  period:        { type: String, required: true }, // YYYY-MM format
-  basicSalary:   { type: Number, required: true },
-  allowances: {
-    housing:     { type: Number, default: 0 },
-    transport:   { type: Number, default: 0 },
-    medical:     { type: Number, default: 0 },
-    other:       { type: Number, default: 0 },
-  },
-  deductions: {
-    paye:        { type: Number, default: 0 }, // Tax
-    nhif:        { type: Number, default: 0 },
-    nssf:        { type: Number, default: 0 },
-    loan:        { type: Number, default: 0 },
-    other:       { type: Number, default: 0 },
-  },
-  grossPay:      { type: Number },
-  netPay:        { type: Number },
-  daysWorked:    { type: Number, default: 0 },
-  overtimeHours: { type: Number, default: 0 },
-  overtimePay:   { type: Number, default: 0 },
-  status:        { type: String, enum: ['draft', 'finalized', 'paid'], default: 'draft' },
-  finalizedBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  finalizedAt:   { type: Date },
-  paymentDate:   { type: Date },
-  notes:         { type: String, default: '' },
-}, { timestamps: true });
+const payrollSchema =
+new mongoose.Schema({
 
-// One payroll per employee per period
-payrollSchema.index({ employee: 1, period: 1 }, { unique: true });
+employee:{
+type:
+mongoose.Schema.Types.ObjectId,
+ref:'Employee',
+required:true,
+},
 
-payrollSchema.pre('save', function (next) {
-  const a = this.allowances;
-  const totalAllowances = (a.housing + a.transport + a.medical + a.other);
-  this.grossPay = this.basicSalary + totalAllowances + this.overtimePay;
+employeeSnapshot:{
+employeeId:String,
 
-  const d = this.deductions;
-  const totalDeductions = (d.paye + d.nhif + d.nssf + d.loan + d.other);
-  this.netPay = Math.max(0, this.grossPay - totalDeductions);
-  next();
+firstName:String,
+
+lastName:String,
+
+department:String,
+
+position:String,
+
+salary:Number,
+
+currency:String,
+},
+
+period:{
+type:String,
+required:true,
+},
+
+basicSalary:{
+type:Number,
+required:true,
+},
+
+allowances:{
+housing:{type:Number,default:0},
+transport:{type:Number,default:0},
+medical:{type:Number,default:0},
+other:{type:Number,default:0},
+},
+
+deductions:{
+paye:{type:Number,default:0},
+nhif:{type:Number,default:0},
+nssf:{type:Number,default:0},
+loan:{type:Number,default:0},
+other:{type:Number,default:0},
+},
+
+grossPay:Number,
+
+netPay:Number,
+
+daysWorked:Number,
+
+overtimeHours:Number,
+
+overtimePay:Number,
+
+status:{
+type:String,
+
+enum:[
+'draft',
+'review',
+'approved',
+'finalized',
+'paid',
+],
+
+default:'draft',
+},
+
+finalizedBy:{
+type:
+mongoose.Schema.Types.ObjectId,
+ref:'User',
+},
+
+finalizedAt:Date,
+
+paymentDate:Date,
+
+notes:String,
+
+},{
+timestamps:true
 });
 
-module.exports = mongoose.model('Payroll', payrollSchema);
+payrollSchema.index(
+{
+employee:1,
+period:1,
+},
+{
+unique:true,
+}
+);
+
+payrollSchema.pre(
+'save',
+function(next){
+
+const totalAllowances=
+Object.values(
+this.allowances
+)
+.reduce(
+(a,b)=>
+a+b,
+0
+);
+
+const totalDeductions=
+Object.values(
+this.deductions
+)
+.reduce(
+(a,b)=>
+a+b,
+0
+);
+
+this.grossPay=
+this.basicSalary+
+totalAllowances+
+this.overtimePay;
+
+this.netPay=
+Math.max(
+0,
+this.grossPay-
+totalDeductions
+);
+
+next();
+
+}
+);
+
+module.exports= mongoose.model( 'Payroll', payrollSchema );
