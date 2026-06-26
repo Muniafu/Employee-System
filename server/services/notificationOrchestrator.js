@@ -68,10 +68,7 @@ const dispatchNotification =
           })
         : null,
 
-      channels.includes(
-        'email'
-      ) &&
-      email
+      channels.includes('email') && email
         ? sendEmailNotification({
             to: email,
 
@@ -87,8 +84,12 @@ const dispatchNotification =
               emailContent.text ||
               message,
           }).then((result) => {
-            results.email =
-              result;
+            console.log(
+              'EMAIL RESULT:',
+              result
+            );
+
+            results.email = result;
           })
         : null,
 
