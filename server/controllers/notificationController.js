@@ -1,4 +1,5 @@
 const { getUserNotifications, markRead } = require('../utils/notificationService');
+
 const Notification = require('../models/Notification');
 
 // GET /api/notifications

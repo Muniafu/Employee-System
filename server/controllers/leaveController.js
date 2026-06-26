@@ -112,7 +112,21 @@ exports.approve = async (req, res, next) => {
     // Notify employee
     await createNotification({ recipient: leave.employee.user._id, type: 'leave', title: 'Leave Approved ✅', message: `Your ${leave.leaveType} leave has been approved.`, priority: 'medium' });
     getIO().emit('leave:approved', { employee: leave.employee.user._id });
-    sendEmail({ to: leave.employee.user.email, ...templates.leaveApproved(leave.employee.user.firstName, { start: leave.startDate, end: leave.endDate }) }).catch(() => {});
+    const emailResult = await sendEmail({
+      to: leave.employee.user.email,
+      ...templates.leaveApproved(
+        leave.employee.user.firstName,
+        {
+          start: leave.startDate,
+          end: leave.endDate,
+        }
+      ),
+    });
+
+    console.log(
+      'LEAVE APPROVAL EMAIL:',
+      emailResult
+    );
 
     res.status(200).json({ success: true, data: leave });
   } catch (err) { next(err); }
@@ -144,12 +158,23 @@ exports.reject = async (req, res, next) => {
       } catch {}
 
     await createNotification({ recipient: leave.employee.user._id, type: 'leave', title: 'Leave Request Update', message: `Your ${leave.leaveType} leave was not approved. Check admin note.`, priority: 'medium' });
-    sendEmail({ to: leave.employee.user.email, ...templates.leaveRejected(leave.employee.user.firstName, leave.adminNote) }).catch(() => {});
+    const emailResult = await sendEmail({
+      to: leave.employee.user.email,
+      ...templates.leaveRejected(
+        leave.employee.user.firstName,
+        leave.adminNote
+      ),
+    });
+
+    console.log(
+      'LEAVE REJECTION EMAIL:',
+      emailResult
+    );
 
     res.status(200).json({ success: true, data: leave });
   } catch (err) { next(err); }
 };
-
+  
 // PATCH /api/leave/:id/cancel
 exports.cancel = async (req, res, next) => {
   try {
