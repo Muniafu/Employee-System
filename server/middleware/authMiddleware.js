@@ -1,74 +1,111 @@
-const { verifyToken } =
-  require('../utils/token');
+const {
+verifyToken
+}=
+require(
+'../utils/token'
+);
 
-const User =
-  require('../models/User');
+const User=
+require(
+'../models/User'
+);
 
-const Employee =
-  require('../models/Employee');
+const Employee=
+require(
+'../models/Employee'
+);
 
-const auth = async (
-  req,
-  res,
-  next
-) => {
-  const header =
-    req.headers.authorization;
+module.exports=
+async(
+req,
+res,
+next
+)=>{
 
-  if (
-    !header ||
-    !header.startsWith('Bearer ')
-  ) {
-    return res.status(401).json({
-      success: false,
-      message:
-        'No token provided. Access denied.',
-    });
-  }
+try{
 
-  const token =
-    header.split(' ')[1];
+const auth=
+req.headers.authorization;
 
-  try {
-    const decoded =
-      verifyToken(token);
+if(
+!auth?.startsWith(
+'Bearer '
+)
+){
+return res
+.status(401)
+.json({
+success:false
+});
+}
 
-    const user =
-      await User.findById(
-        decoded.id
-      ).select('-password');
+const token=
+auth.split(
+' '
+)[1];
 
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message:
-          'User no longer exists.',
-      });
-    }
+const decoded=
+verifyToken(
+token
+);
 
-    const employeeProfile =
-      await Employee.findOne({
-        user: user._id,
-      }).select('_id');
+const user=
+await User
+.findById(
+decoded.id
+)
+.select(
+'-password'
+);
 
-    req.user = {
-      ...user.toObject(),
+if(
+!user
+||
+!user.isActive
+||
+user.status!==
+'APPROVED'
+){
+return res
+.status(403)
+.json({
+success:false,
+message:
+'Account unavailable',
+});
+}
 
-      hasEmployeeProfile:
-        !!employeeProfile,
+const employee=
+await Employee
+.findOne({
+user:
+user._id,
+})
+.select(
+'_id'
+);
 
-      employeeId:
-        employeeProfile?._id || null,
-    };
+req.user={
+...user.toObject(),
 
-    next();
+employeeId:
+employee?._id,
 
-  } catch (err) {
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid token.',
-    });
-  }
 };
 
-module.exports = auth;
+next();
+
+}
+catch{
+
+return res
+.status(401)
+.json({
+success:false,
+message:
+'Invalid token',
+});
+
+}
+
+};
