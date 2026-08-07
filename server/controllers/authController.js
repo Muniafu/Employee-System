@@ -1,14 +1,31 @@
 const User = require('../models/User');
 const Employee = require('../models/Employee');
-const crypto = require("crypto");
+const crypto = require('crypto');
 
 const {
-    sendEmail,
-    templates,
-} = require("../utils/emailService");
+  sendEmail,
+  templates,
+} = require('../utils/emailService');
+
 const { signToken } = require('../utils/token');
 
-const sendAuth = (user, code, res) => {
+/*
+|--------------------------------------------------------------------------
+| AUTH RESPONSE HELPER
+|--------------------------------------------------------------------------
+| Creates a safe authentication response containing:
+| - JWT token
+| - sanitized user
+| - employee profile
+|
+| IMPORTANT:
+| Employee.findOne() MUST be awaited.
+| Returning the Mongoose Query object directly to res.json()
+| causes the "Converting circular structure to JSON" error.
+|--------------------------------------------------------------------------
+*/
+
+const sendAuth = async (user, code, res) => {
   const token = signToken({
     id: user._id,
     role: user.role,
@@ -16,24 +33,39 @@ const sendAuth = (user, code, res) => {
 
   const safeUser = user.toObject();
 
+  // Never expose sensitive authentication fields.
   delete safeUser.password;
+  delete safeUser.passwordResetToken;
+  delete safeUser.passwordResetExpires;
+  delete safeUser.emailVerificationToken;
+  delete safeUser.emailVerificationExpires;
 
-  const employee = Employee.findOne({
+  const employee = await Employee.findOne({
     user: user._id,
-  }).select('_id employeeId department position status');
+  })
+    .select('_id employeeId department position status')
+    .lean();
 
-  res.status(code).json({
+  return res.status(code).json({
     success: true,
     data: {
       token,
+
       user: {
         ...safeUser,
-        hasEmployeeProfile: !!employee,
+        hasEmployeeProfile: Boolean(employee),
       },
-      employee,
+
+      employee: employee || null,
     },
   });
 };
+
+/*
+|--------------------------------------------------------------------------
+| CREATE USER + EMPLOYEE PROFILE
+|--------------------------------------------------------------------------
+*/
 
 const createUserWithEmployee = async ({
   firstName,
@@ -47,7 +79,6 @@ const createUserWithEmployee = async ({
   phone = '',
   salary = 0,
 }) => {
-
   const existing = await User.findOne({ email });
 
   if (existing) {
@@ -55,11 +86,15 @@ const createUserWithEmployee = async ({
     err.statusCode = 409;
     throw err;
   }
-  
-  // Bootstrap the system
+
+  /*
+   * Bootstrap the system.
+   *
+   * The first registered user becomes the protected superuser.
+   */
   const userCount = await User.countDocuments();
 
-  const isFirstuser = userCount === 0;
+  const isFirstUser = userCount === 0;
 
   const createdUser = await User.create({
     firstName,
@@ -67,15 +102,18 @@ const createUserWithEmployee = async ({
     email,
     password,
 
-    role: isFirstuser ? 'superuser' : role,
+    role: isFirstUser ? 'superuser' : role,
 
-    status: isFirstuser ? 'APPROVED' : status,
+    status: isFirstUser ? 'APPROVED' : status,
 
-    isSystem: isFirstuser,
+    isSystem: isFirstUser,
 
-    protectedAccount: isFirstuser,
+    protectedAccount: isFirstUser,
   });
 
+  /*
+   * Every registered user receives an employee profile.
+   */
   await Employee.create({
     user: createdUser._id,
     department,
@@ -87,10 +125,14 @@ const createUserWithEmployee = async ({
   return createdUser;
 };
 
-// PUBLIC EMPLOYEE REGISTER
+/*
+|--------------------------------------------------------------------------
+| PUBLIC EMPLOYEE REGISTRATION
+|--------------------------------------------------------------------------
+*/
+
 exports.register = async (req, res, next) => {
   try {
-
     const {
       firstName,
       lastName,
@@ -113,15 +155,16 @@ exports.register = async (req, res, next) => {
       salary,
     });
 
-    user.lastLogin = new Date();
-
-    await user.save({
-      validateBeforeSave: false,
-    });
-    
-    // Only automatically login approved users
+    /*
+     * First user is automatically approved and becomes superuser.
+     */
     if (user.status === 'APPROVED') {
-      
+      user.lastLogin = new Date();
+
+      await user.save({
+        validateBeforeSave: false,
+      });
+
       const token = signToken({
         id: user._id,
         role: user.role,
@@ -130,6 +173,10 @@ exports.register = async (req, res, next) => {
       const safeUser = user.toObject();
 
       delete safeUser.password;
+      delete safeUser.passwordResetToken;
+      delete safeUser.passwordResetExpires;
+      delete safeUser.emailVerificationToken;
+      delete safeUser.emailVerificationExpires;
 
       return res.status(201).json({
         success: true,
@@ -140,28 +187,36 @@ exports.register = async (req, res, next) => {
           user: safeUser,
         },
       });
-
     }
 
-    return res.status(210).json({
+    /*
+     * Normal employees require administrator approval.
+     */
+    return res.status(202).json({
       success: true,
-      mesage: 'Registration successful. Your account is awaiting administrator approval.',
+      message:
+        'Registration successful. Your account is awaiting administrator approval.',
       data: {
         approved: false,
       },
-      
     });
-
   } catch (err) {
     next(err);
   }
 };
 
-// LOGIN
+/*
+|--------------------------------------------------------------------------
+| LOGIN
+|--------------------------------------------------------------------------
+*/
+
 exports.login = async (req, res, next) => {
   try {
-
-    const { email, password } = req.body;
+    const {
+      email,
+      password,
+    } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -170,6 +225,10 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    /*
+     * Password is explicitly selected because the User schema
+     * has select: false.
+     */
     const user = await User
       .findOne({ email })
       .select('+password');
@@ -181,6 +240,9 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    /*
+     * Account lifecycle checks.
+     */
     if (!user.isActive) {
       return res.status(403).json({
         success: false,
@@ -191,44 +253,50 @@ exports.login = async (req, res, next) => {
     if (user.status === 'PENDING') {
       return res.status(403).json({
         success: false,
-        message:
-          'Your account is pending approval.',
+        message: 'Your account is pending approval.',
       });
     }
 
     if (user.status === 'REJECTED') {
       return res.status(403).json({
         success: false,
-        message:
-          'Your account request was rejected.',
+        message: 'Your account request was rejected.',
       });
     }
 
     if (user.status === 'SUSPENDED') {
       return res.status(403).json({
         success: false,
-        message:
-          'Your account has been suspended.',
+        message: 'Your account has been suspended.',
       });
     }
 
+    /*
+     * Record successful login.
+     */
     user.lastLogin = new Date();
 
     await user.save({
       validateBeforeSave: false,
     });
 
-    await sendAuth(user, 200, res);
-
+    /*
+     * sendAuth fetches the employee profile safely.
+     */
+    return await sendAuth(user, 200, res);
   } catch (err) {
     next(err);
   }
 };
 
-// CURRENT USER
+/*
+|--------------------------------------------------------------------------
+| CURRENT USER
+|--------------------------------------------------------------------------
+*/
+
 exports.getMe = async (req, res, next) => {
   try {
-
     if (req.user.status !== 'APPROVED') {
       return res.status(403).json({
         success: false,
@@ -238,26 +306,44 @@ exports.getMe = async (req, res, next) => {
 
     const employee = await Employee.findOne({
       user: req.user._id,
-    });
+    })
+      .select('_id employeeId department position status')
+      .lean();
 
-    res.status(200).json({
+    /*
+     * req.user may be a Mongoose document depending on
+     * authMiddleware implementation.
+     */
+    const safeUser = req.user.toObject
+      ? req.user.toObject()
+      : { ...req.user };
+
+    delete safeUser.password;
+    delete safeUser.passwordResetToken;
+    delete safeUser.passwordResetExpires;
+    delete safeUser.emailVerificationToken;
+    delete safeUser.emailVerificationExpires;
+
+    return res.status(200).json({
       success: true,
       data: {
-        user: req.user,
-        employee,
+        user: safeUser,
+        employee: employee || null,
       },
     });
-
   } catch (err) {
     next(err);
   }
 };
 
-// ADMIN REGISTER
-// ADMIN / HR REGISTER
+/*
+|--------------------------------------------------------------------------
+| ADMIN / HR REGISTRATION
+|--------------------------------------------------------------------------
+*/
+
 exports.registerAdmin = async (req, res, next) => {
   try {
-
     const {
       firstName,
       lastName,
@@ -277,32 +363,35 @@ exports.registerAdmin = async (req, res, next) => {
       'admin',
     ];
 
-    if (
-      role &&
-      !allowedRoles.includes(role)
-    ) {
+    if (role && !allowedRoles.includes(role)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid role assignment.',
       });
     }
 
-    // Only superuser can create admins
+    /*
+     * Only superuser can create admin accounts.
+     */
     if (
       role === 'admin' &&
       req.user.role !== 'superuser'
     ) {
       return res.status(403).json({
         success: false,
-        message: 'Only superusers can create admin accounts.',
+        message:
+          'Only superusers can create admin accounts.',
       });
     }
 
-    // Prevent superuser creation through endpoint
+    /*
+     * Superusers cannot be created through this endpoint.
+     */
     if (role === 'superuser') {
       return res.status(403).json({
         success: false,
-        message: 'Superuser accounts cannot be created through this endpoint.',
+        message:
+          'Superuser accounts cannot be created through this endpoint.',
       });
     }
 
@@ -319,23 +408,34 @@ exports.registerAdmin = async (req, res, next) => {
       salary,
     });
 
-    res.status(201).json({
+    const safeUser = user.toObject();
+
+    delete safeUser.password;
+    delete safeUser.passwordResetToken;
+    delete safeUser.passwordResetExpires;
+    delete safeUser.emailVerificationToken;
+    delete safeUser.emailVerificationExpires;
+
+    return res.status(201).json({
       success: true,
       message: 'Privileged account created successfully.',
       data: {
-        user,
+        user: safeUser,
       },
     });
-
   } catch (err) {
     next(err);
   }
 };
 
-// CHANGE PASSWORD
+/*
+|--------------------------------------------------------------------------
+| CHANGE PASSWORD
+|--------------------------------------------------------------------------
+*/
+
 exports.changePassword = async (req, res, next) => {
   try {
-
     const {
       currentPassword,
       newPassword,
@@ -352,7 +452,17 @@ exports.changePassword = async (req, res, next) => {
       .findById(req.user._id)
       .select('+password');
 
-    if (!(await user.comparePassword(currentPassword))) {
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User account not found.',
+      });
+    }
+
+    const validPassword =
+      await user.comparePassword(currentPassword);
+
+    if (!validPassword) {
       return res.status(401).json({
         success: false,
         message: 'Current password incorrect.',
@@ -363,57 +473,52 @@ exports.changePassword = async (req, res, next) => {
 
     await user.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'Password changed successfully.',
     });
-
   } catch (err) {
     next(err);
   }
 };
 
 /*
-=========================================================
-FORGOT PASSWORD
-=========================================================
+|--------------------------------------------------------------------------
+| FORGOT PASSWORD
+|--------------------------------------------------------------------------
 */
 
 exports.forgotPassword = async (req, res, next) => {
-
   try {
-
     const { email } = req.body;
 
     if (!email) {
       return res.status(400).json({
         success: false,
-        message: "Email is required.",
+        message: 'Email is required.',
       });
     }
 
     const user = await User
       .findOne({ email })
-      .select("+passwordResetToken +passwordResetExpires");
+      .select(
+        '+passwordResetToken +passwordResetExpires'
+      );
 
-    /**
+    /*
      * Prevent account enumeration.
      */
-
     if (!user) {
-
       return res.status(200).json({
         success: true,
         message:
-          "If an account exists for this email, a reset link has been sent.",
+          'If an account exists for this email, a reset link has been sent.',
       });
-
     }
 
-    /**
-     * Create secure token.
+    /*
+     * Create secure reset token.
      */
-
     const resetToken =
       user.createPasswordResetToken();
 
@@ -421,12 +526,11 @@ exports.forgotPassword = async (req, res, next) => {
       validateBeforeSave: false,
     });
 
-    /**
-     * Frontend URL
+    /*
+     * Frontend reset URL.
      */
-
     const resetURL =
-      `${process.env.CLIENT_URL || "http://localhost:5173"}/reset-password/${resetToken}`;
+      `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
 
     const emailTemplate =
       templates.passwordReset(
@@ -434,25 +538,16 @@ exports.forgotPassword = async (req, res, next) => {
         resetURL
       );
 
-    const result =
-      await sendEmail({
+    const result = await sendEmail({
+      to: user.email,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+    });
 
-        to: user.email,
-
-        subject:
-          emailTemplate.subject,
-
-        html:
-          emailTemplate.html,
-
-      });
-
-    /**
-     * Email failed.
+    /*
+     * If email delivery fails, invalidate the token.
      */
-
     if (!result.success) {
-
       user.clearPasswordReset();
 
       await user.save({
@@ -460,136 +555,86 @@ exports.forgotPassword = async (req, res, next) => {
       });
 
       return res.status(500).json({
-
         success: false,
-
-        message:
-          "Unable to send reset email.",
-
+        message: 'Unable to send reset email.',
       });
-
     }
 
-    res.status(200).json({
-
+    return res.status(200).json({
       success: true,
-
       message:
-        "If an account exists for this email, a reset link has been sent.",
-
+        'If an account exists for this email, a reset link has been sent.',
     });
-
-  }
-
-  catch (err) {
-
+  } catch (err) {
     next(err);
-
   }
-
 };
 
 /*
-=========================================================
-RESET PASSWORD
-=========================================================
+|--------------------------------------------------------------------------
+| RESET PASSWORD
+|--------------------------------------------------------------------------
 */
 
 exports.resetPassword = async (req, res, next) => {
-
   try {
-
     const { token } = req.params;
-
-    const { password } =
-      req.body;
+    const { password } = req.body;
 
     if (!password) {
-
       return res.status(400).json({
-
         success: false,
-
-        message:
-          "New password is required.",
-
+        message: 'New password is required.',
       });
-
     }
 
-    /**
-     * Hash incoming token.
+    /*
+     * Hash incoming reset token.
      */
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
 
-    const hashedToken =
-      crypto
-        .createHash("sha256")
-        .update(token)
-        .digest("hex");
-
-    const user =
-      await User.findOne({
-
-        passwordResetToken:
-          hashedToken,
-
-        passwordResetExpires:
-          {
-            $gt: Date.now(),
-          },
-
+    const user = await User
+      .findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpires: {
+          $gt: Date.now(),
+        },
       })
       .select(
-        "+passwordResetToken +passwordResetExpires +password"
+        '+passwordResetToken +passwordResetExpires +password'
       );
 
     if (!user) {
-
       return res.status(400).json({
-
         success: false,
-
         message:
-          "Reset link is invalid or has expired.",
-
+          'Reset link is invalid or has expired.',
       });
-
     }
 
-    /**
-     * Update password.
+    /*
+     * Update password and invalidate reset token.
      */
-
-    user.password =
-      password;
+    user.password = password;
 
     user.clearPasswordReset();
 
     await user.save();
 
-    /**
-     * Auto login.
+    /*
+     * Auto-login after successful password reset.
      */
-
-    user.lastLogin =
-      new Date();
+    user.lastLogin = new Date();
 
     await user.save({
       validateBeforeSave: false,
     });
 
-    sendAuth(
-      user,
-      200,
-      res
-    );
-
-  }
-
-  catch (err) {
-
+    return await sendAuth(user, 200, res);
+  } catch (err) {
     next(err);
-
   }
-
 };
