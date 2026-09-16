@@ -57,7 +57,7 @@ class PayrollAttendanceService {
             }
 
             overtimeHours +=
-                Number(record.overtime || 0);
+                Number(record.overtimeHours || 0);
 
         }
 
