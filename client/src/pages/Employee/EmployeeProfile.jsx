@@ -5,7 +5,7 @@ import { getEmployee, getMyProfile, updateEmployee } from '../../services/employ
 import { getError } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
 
-const DEPTS = ['Engineering','HR','Finance','Marketing','Operations','Sales','Legal','Other'];
+const DEPTS = ['Engineering','HR','Finance','Marketing','Legal','Other'];
 
 export default function EmployeeProfile() {
   const { id } = useParams();
@@ -34,7 +34,9 @@ export default function EmployeeProfile() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateEmployee(profile._id, form);
+      const payload = { ...form};
+      if (!payload.dateOfBirth) delete payload.dateOfBirth;
+      await updateEmployee(profile._id, payload);
       toast.success('Profile updated!');
       setEditing(false);
     } catch(err) { toast.error(getError(err)); }

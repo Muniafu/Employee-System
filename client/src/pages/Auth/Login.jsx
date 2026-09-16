@@ -97,6 +97,15 @@ export default function Login() {
       const message = err?.response?.data?.message || "";
 
       const lowerMessage = message.toLowerCase();
+
+      if (lowerMessage.includes("verify")) {
+        navigate("/verify-email-required", {
+          replace: true,
+          state: { email },
+        });
+        return;
+      }
+
       if (lowerMessage.includes("pending")) {
         navigate("/pending-approval", {
           replace: true,
@@ -113,6 +122,13 @@ export default function Login() {
 
       if (lowerMessage.includes("suspended")) {
         navigate("/account-suspended", {
+          replace: true,
+        });
+        return;
+      }
+
+      if (lowerMessage.includes("terminated")) {
+        navigate("/account-terminated", {
           replace: true,
         });
         return;
@@ -244,7 +260,7 @@ export default function Login() {
             
             <div className="register-link">
               
-              Don't have an account?
+              Don`t have an account?
               
               <Link
               to="/register">

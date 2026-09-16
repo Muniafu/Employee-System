@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import {
     useNavigate,
+    useParams,
     useSearchParams,
     Link,
 } from "react-router-dom";
@@ -12,6 +13,7 @@ import {
     Mail,
     RefreshCw,
 } from "lucide-react";
+import { toast } from "react-toastify";
 
 import AuthLayout from "../../components/Auth/AuthLayout";
 import AuthCard from "../../components/Auth/AuthCard";
@@ -22,17 +24,13 @@ import { useAuth } from "../../context/useAuth";
 export default function VerifyEmail() {
 
     const navigate = useNavigate();
-
+    const { token } = useParams();
     const [searchParams] =
         useSearchParams();
-
     const {
         verifyEmail,
         resendVerification,
     } = useAuth();
-
-    const token =
-        searchParams.get("token");
 
     const email =
         searchParams.get("email");
@@ -44,9 +42,6 @@ export default function VerifyEmail() {
         useState(false);
 
     const [error, setError] =
-        useState("");
-
-    const [ setMessage] =
         useState("");
 
     const [sending, setSending] =
@@ -105,19 +100,14 @@ export default function VerifyEmail() {
             setSending(true);
 
             await resendVerification(email);
-
-            setMessage(
-                "Verification email sent successfully."
+            toast.success(
+                "Verification email sent. Check your inbox."
             );
 
         } catch (err) {
-
-            setMessage(
-
+            toast.error(
                 err?.response?.data?.message ||
-
                 "Unable to resend verification email."
-
             );
 
         } finally {

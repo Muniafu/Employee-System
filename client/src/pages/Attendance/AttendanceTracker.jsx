@@ -11,9 +11,6 @@ import {
   Clock3,
   Play,
   Square,
-  CheckCircle2,
-  Circle,
-  LoaderCircle,
   CalendarDays,
   TimerReset,
   AlarmClock,
@@ -69,9 +66,17 @@ const fmtDate = (d) =>
 
 export default function AttendanceTracker() {
 
+  /*
+   * NOTE: isAdmin / isHR were previously used to gate the
+   * "All Employees" tab and fetch. That excluded managers,
+   * even though the backend (/attendance/all) explicitly
+   * authorizes them. isManager is the hierarchical flag
+   * from AuthProvider (true for manager/hr/admin/superuser),
+   * so using it here keeps frontend visibility in sync with
+   * backend authorization.
+   */
   const {
-    isAdmin,
-    isHR,
+    isManager,
     hasEmployeeProfile,
   } = useAuth();
 
@@ -90,6 +95,9 @@ export default function AttendanceTracker() {
   const [allRecords,
     setAllRecords] =
       useState([]);
+
+  const [allScope, setAllScope] =
+    useState(null);
 
   const [summary, setSummary] =
     useState({});
@@ -115,9 +123,11 @@ export default function AttendanceTracker() {
    */
 
   useEffect(() => {
-    if (!hasEmployeeProfile) {
-      setView('all');
-    }
+    setView(
+      hasEmployeeProfile
+        ? 'my'
+        : 'all'
+    );
   }, [hasEmployeeProfile]);
 
   /**
@@ -181,13 +191,16 @@ export default function AttendanceTracker() {
         }
 
         /**
-         * ADMIN GLOBAL DATA
+         * TEAM / COMPANY-WIDE DATA
+         *
+         * isManager covers manager, hr, admin, superuser —
+         * matching who the backend actually authorizes for
+         * GET /attendance/all. The backend itself scopes a
+         * manager down to their own department; admins/hr
+         * see everything.
          */
 
-        if (
-          isAdmin ||
-          isHR
-        ) {
+        if (isManager) {
           const allRes =
             await getAllAttendance();
 
@@ -195,8 +208,17 @@ export default function AttendanceTracker() {
             allRes?.data?.data
             || []
           );
-        }
 
+          setAllScope(
+            allRes?.data?.scope
+            || null
+          );
+
+        } else {
+
+          setAllRecords([]);
+          setAllScope(null);
+        }
       } catch (err) {
         toast.error(
           getError(err)
@@ -208,8 +230,7 @@ export default function AttendanceTracker() {
 
     }, [
       hasEmployeeProfile,
-      isAdmin,
-      isHR,
+      isManager,
     ]);
 
   useEffect(() => {
@@ -370,6 +391,15 @@ export default function AttendanceTracker() {
   const isComplete =
     today?.clockIn &&
     today?.clockOut;
+
+  /*
+   * When the "all records" view is department-scoped
+   * (i.e. the viewer is a manager, not admin/hr), the
+   * Department column is redundant since every row is
+   * the same department — so it's dropped from the table.
+   */
+  const isDeptScoped =
+    allScope === 'department';
 
   return (
     <div>
@@ -605,7 +635,7 @@ export default function AttendanceTracker() {
 
       {/* TABS */}
 
-      {(isAdmin || isHR) &&
+      {isManager &&
         hasEmployeeProfile && (
           <div className="tabs">
 
@@ -632,7 +662,9 @@ export default function AttendanceTracker() {
                 setView('all')
               }
             >
-              All Employees
+              {isDeptScoped
+                ? 'My Department'
+                : 'All Employees'}
             </button>
           </div>
       )}
@@ -711,10 +743,14 @@ export default function AttendanceTracker() {
           <span className="card-title">
 
             {!hasEmployeeProfile
-              ? 'All Attendance Records'
+              ? (isDeptScoped
+                  ? 'Department Attendance Records'
+                  : 'All Attendance Records')
               : view === 'my'
                 ? 'My Attendance History'
-                : 'All Attendance Records'}
+                : (isDeptScoped
+                    ? 'Department Attendance Records'
+                    : 'All Attendance Records')}
 
           </span>
         </div>
@@ -765,14 +801,19 @@ export default function AttendanceTracker() {
                       `${r.employee?.user?.firstName || ''} ${r.employee?.user?.lastName || ''}`,
                   },
 
-                  {
-                    label:
-                      'Department',
-
-                    render: (r) =>
-                      r.employee?.department
-                      || '—',
-                  },
+                  /*
+                   * Department column omitted when the view
+                   * is already department-scoped (manager) —
+                   * every row would show the same value.
+                   */
+                  ...(isDeptScoped
+                    ? []
+                    : [{
+                        label: 'Department',
+                        render: (r) =>
+                          r.employee?.department
+                          || '—',
+                      }]),
 
                   {
                     label:

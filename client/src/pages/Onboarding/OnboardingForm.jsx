@@ -28,7 +28,7 @@ export default function OnboardingForm() {
       if (isAdmin || isHR) {
         const [allRes, empRes] = await Promise.all([
           getAllOnboarding(),
-          getEmployees(),
+          getEmployees({ status: 'pending' }),
         ]);
 
         setAll(allRes.data.data);
@@ -196,7 +196,7 @@ export default function OnboardingForm() {
                       <div className="card-header"><span className="card-title">Onboarding Checklist</span></div>
                       <div className="card-body" style={{ padding:'0 20px' }}>
                         {myOnboarding.tasks?.map(task => (
-                          <TaskItem key={task._id} task={task} canComplete={true} />
+                          <TaskItem key={task._id} task={task} canComplete={task.assignedTo === 'employee'} />
                         ))}
                       </div>
                     </div>
