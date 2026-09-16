@@ -1,8 +1,8 @@
 const {
-  sendEmail,
+  sendEmail: sendEmailUtil,
 } = require('../../utils/emailService');
 
-const sendEmailNotification = async ({
+const sendEmail = async ({
   to,
   subject,
   html,
@@ -15,7 +15,7 @@ const sendEmailNotification = async ({
     };
   }
 
-  const result = await sendEmail({
+  return sendEmailUtil({
     to,
     subject,
     html,
@@ -26,5 +26,5 @@ const sendEmailNotification = async ({
 };
 
 module.exports = {
-  sendEmailNotification,
+  sendEmail
 };
