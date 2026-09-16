@@ -377,23 +377,11 @@ export default function AuthProvider({
    * ROLE FLAGS
    */
 
-  const isAdmin = [
-    'admin',
-    'superuser',
-  ].includes(user?.role);
+  const isAdmin = user?.role === 'admin';
 
-  const isHR = [
-    'admin',
-    'superuser',
-    'hr',
-  ].includes(user?.role);
+  const isHR = ['admin', 'hr'].includes(user?.role);
 
-  const isManager = [
-    'admin',
-    'superuser',
-    'hr',
-    'manager',
-  ].includes(user?.role);
+  const isManager = ['admin', 'hr', 'manager'].includes(user?.role);
 
   /**
    * ENTERPRISE CAPABILITY

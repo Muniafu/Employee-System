@@ -234,26 +234,15 @@ export default function NotificationProvider({
       setUnreadCount(unreadCount);
 
     };
-
-
-    socket.on(
-      'notification:new',
-      'notification:updated',
-      'notifications:read-all',
-      handleNewNotification,
-      handleUpdatedNotification,
-      handleReadAll
-    );
+    
+    socket.on('notification:new', handleNewNotification);
+    socket.on('notification:updated', handleUpdatedNotification);
+    socket.on('notifications:read-all', handleReadAll);
 
     return () => {
-      socket.off(
-        'notification:new',
-        'notification:updated',
-        'notifications:read-all',
-        handleUpdatedNotification,
-        handleReadAll,
-        handleNewNotification
-      );
+      socket.off('notification:new', handleNewNotification);
+      socket.off('notification:updated', handleUpdatedNotification);
+      socket.off('notifications:read-all', handleReadAll);
 
       disconnectSocket();
     };
