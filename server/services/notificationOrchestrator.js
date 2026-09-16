@@ -6,7 +6,7 @@ const {
 } = require('./channels/inAppChannel');
 
 const {
-  sendEmailNotification,
+  sendEmail,
 } = require('./channels/emailChannel');
 
 const {
@@ -69,7 +69,7 @@ const dispatchNotification =
         : null,
 
       channels.includes('email') && email
-        ? sendEmailNotification({
+        ? sendEmail({
             to: email,
 
             subject:
