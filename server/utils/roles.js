@@ -1,5 +1,4 @@
 const ROLES = {
-  SUPERUSER: 'superuser',
   ADMIN: 'admin',
   HR: 'hr',
   MANAGER: 'manager',
@@ -11,11 +10,10 @@ const ROLE_HIERARCHY = {
   manager: 2,
   hr: 3,
   admin: 4,
-  superuser: 5,
 };
 
-const PRIVILEGED = [ROLES.SUPERUSER, ROLES.ADMIN, ROLES.HR];
-const MANAGEMENT = [ROLES.SUPERUSER, ROLES.ADMIN, ROLES.HR, ROLES.MANAGER];
+const PRIVILEGED = [ROLES.ADMIN, ROLES.HR];
+const MANAGEMENT = [ROLES.ADMIN, ROLES.HR, ROLES.MANAGER];
 
 const hasRole = (userRole, requiredRoles) => {
   return requiredRoles.includes(userRole);

@@ -209,8 +209,7 @@ const getUserNotifications = async (
       ),
 
       hasNext:
-        page <
-        Math.ceil(total / limit),
+        page < Math.ceil(total / limit),
 
       hasPrev: page > 1,
     },

@@ -34,6 +34,8 @@ const NHIF_RATES = [
   { limit: Infinity, amount: 1700 },
 ];
 
+const toNumber = (value) => Number(value) || 0;
+
 const round = (value = 0) =>
   Number(
     (toNumber(value)).toFixed(2)
@@ -194,11 +196,16 @@ const computeStatutoryDeductions = ({
   payrollSettings,
 }) => {
   const nssf = payrollSettings.deductions.nssf.enabled
+    ? computeNSSF(grossPay)
+    : 0;
+
 
   const taxableIncome =
     grossPay - nssf;
 
   const paye = payrollSettings.deductions.paye.enabled
+    ? computePAYE(taxableIncome, payrollSettings.taxReliefs?.personalRelief)
+    : 0;
 
   const nhif = payrollSettings.deductions.nhif.enabled
     ? computeNHIF(grossPay)
@@ -212,7 +219,6 @@ const computeStatutoryDeductions = ({
         )
       : 0;
   
-  const toNumber = (value) => Number(value) || 0;
 
   return {
     taxableIncome: round(

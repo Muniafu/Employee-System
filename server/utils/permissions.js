@@ -48,13 +48,6 @@ Object
 .values(
 PERMISSIONS
 ),
-
-superuser:
-Object
-.values(
-PERMISSIONS
-),
-
 };
 
 module.exports={

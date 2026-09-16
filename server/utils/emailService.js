@@ -135,12 +135,59 @@ const templates = {
     `,
   }),
 
+  confirmSocialLink: (name, provider, link) => ({
+
+    subject: `Confirm your ${provider} sign-in link`,
+
+    html: `
+        <h2>Confirm Account Link</h2>
+
+        <p>Hello ${name},</p>
+
+        <p>
+            Someone tried to sign in to your EMS account using
+            <strong>${provider}</strong>, but an account with this
+            email already exists.
+        </p>
+
+        <p>
+            If this was you, click below to link your
+            ${provider} sign-in to your existing account.
+        </p>
+
+        <a href="${link}">
+            Confirm and Link Account
+        </a>
+
+        <p>
+            This link expires in 30 minutes.
+        </p>
+
+        <p>
+            If you didn't request this, ignore this email — no
+            changes will be made and your password login keeps working.
+        </p>
+    `,
+  }),
+
   welcome: (name) => ({
     subject: 'Welcome to EMS',
     html: `
       <h2>Welcome</h2>
       <p>Hello ${name},</p>
       <p>Your account has been created successfully.</p>
+    `,
+  }),
+
+  emailVerification: (name, link) => ({
+    subject: 'Verify Your Email Address',
+    html: `
+      <h2>Email Verification</h2>
+      <p>Hello ${name},</p>
+      <p>Please verify your email address by clicking the link below:</p>
+      <a href="${link}">Verify Email</a>
+      <p>This link expires in 24 hours.</p>
+      <p> If you didn't create an account, please ignore this email.</p>
     `,
   }),
 };
