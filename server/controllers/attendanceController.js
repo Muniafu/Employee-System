@@ -39,14 +39,6 @@ const getKenyaDate = (date = new Date()) => {
 
 /**
  * Returns the start and end of the current Kenya calendar day.
- *
- * Example:
- *
- * Kenya:
- *   2026-08-07 00:00:00
- *   2026-08-08 00:00:00
- *
- * MongoDB stores these as UTC instants internally.
  */
 const getKenyaDayBounds = (date = new Date()) => {
     const kenyaDate = getKenyaDate(date);
@@ -116,12 +108,6 @@ const calculateLateMinutes = (
         dayStart.getTime()
     );
 
-    /*
-     * dayStart represents:
-     * 00:00 Kenya time = 21:00 UTC previous day.
-     *
-     * Add 8 hours to reach 08:00 Kenya time.
-     */
     workStart.setTime(
         workStart.getTime() +
         8 * 60 * 60 * 1000
@@ -222,16 +208,10 @@ exports.clockIn = async (req, res, next) => {
             });
         }
 
-        /*
-         * Synchronize employee leave status first.
-         */
         await syncEmployeeLeaveStatus(
             employee._id
         );
 
-        /*
-         * Do not allow attendance while on approved leave.
-         */
         const activeLeave =
             await isEmployeeOnApprovedLeave(
                 employee._id
@@ -242,10 +222,6 @@ exports.clockIn = async (req, res, next) => {
                 start: dayStart,
             } = getKenyaDayBounds();
 
-            /*
-             * Create an on-leave attendance record
-             * only if one does not already exist.
-             */
             await Attendance.updateOne(
                 {
                     employee: employee._id,
@@ -281,15 +257,6 @@ exports.clockIn = async (req, res, next) => {
             end: dayEnd,
         } = getKenyaDayBounds();
 
-        /*
-         * Find today's attendance using a Date range.
-         *
-         * DO NOT use:
-         *
-         * date: getKenyaDate()
-         *
-         * and never use $regex against date.
-         */
         const existing =
             await Attendance.findOne({
                 employee: employee._id,
@@ -299,9 +266,6 @@ exports.clockIn = async (req, res, next) => {
                 },
             });
 
-        /*
-         * Employee has already clocked in.
-         */
         if (existing?.clockIn) {
             return res.status(409).json({
                 success: false,
@@ -320,13 +284,6 @@ exports.clockIn = async (req, res, next) => {
                 now
             );
 
-        /*
-         * If an attendance record exists without
-         * clockIn (for example an automatically created
-         * absent/on-leave record), update it.
-         *
-         * Otherwise create a new record.
-         */
         let attendance;
 
         if (existing) {
@@ -375,13 +332,6 @@ exports.clockIn = async (req, res, next) => {
             data: attendance,
         });
     } catch (err) {
-        /*
-         * MongoDB unique-index race protection.
-         *
-         * If two clock-in requests arrive at almost
-         * exactly the same time, return 409 rather than
-         * exposing a raw database error.
-         */
         if (err?.code === 11000) {
             return res.status(409).json({
                 success: false,
@@ -581,17 +531,6 @@ exports.getMyAttendance = async (
             month
         );
 
-        /*
-         * IMPORTANT:
-         *
-         * Attendance.date is a Date.
-         *
-         * Query with $gte/$lt.
-         *
-         * NEVER use:
-         *
-         * date: { $regex: ... }
-         */
         const records =
             await Attendance.find({
                 employee: employee._id,
@@ -762,6 +701,19 @@ exports.getToday = async (
  * GET /api/attendance/all
  *
  * Intended for HR/Admin/Manager reporting.
+ *
+ * SCOPING RULES:
+ *
+ * - admin / superuser / hr  -> unrestricted. An optional
+ *   `department` query param narrows the view further.
+ *
+ * - manager (and any other non-privileged role that reaches
+ *   this route) -> ALWAYS restricted to their own department,
+ *   regardless of any `department` query param supplied. This
+ *   was the source of the bug: previously the department
+ *   filter only applied if a query param was explicitly sent,
+ *   so a manager with no query param saw every employee's
+ *   attendance company-wide.
  */
 exports.getAll = async (
     req,
@@ -776,14 +728,6 @@ exports.getAll = async (
 
         const filter = {};
 
-        /*
-         * If a date is provided, interpret it as a
-         * Kenya calendar date and query using a Date range.
-         *
-         * Example:
-         *
-         * ?date=2026-08-07
-         */
         if (date) {
             const parsedDate =
                 /^\d{4}-\d{2}-\d{2}$/.test(
@@ -829,15 +773,44 @@ exports.getAll = async (
             };
         }
 
+        const PRIVILEGED_ROLES = [
+            'admin',
+            'superuser',
+            'hr',
+        ];
+
+        let departmentFilter = department;
+
         /*
-         * Department filtering.
+         * Non-privileged roles (e.g. manager) are hard-scoped
+         * to their own department. The query param is ignored
+         * for them so a manager can't widen their own view by
+         * passing a different department manually.
          */
-        if (department) {
+        if (!PRIVILEGED_ROLES.includes(req.user.role)) {
+            const managerEmployee =
+                await Employee.findOne({
+                    user: req.user._id,
+                }).select('department');
+
+            if (!managerEmployee?.department) {
+                return res.status(403).json({
+                    success: false,
+                    message:
+                        'No department assigned to this account.',
+                });
+            }
+
+            departmentFilter =
+                managerEmployee.department;
+        }
+
+        if (departmentFilter) {
             const employees =
                 await Employee.find({
                     department: {
                         $regex:
-                            department,
+                            departmentFilter,
                         $options: 'i',
                     },
                 }).select('_id');
@@ -870,6 +843,12 @@ exports.getAll = async (
 
         return res.status(200).json({
             success: true,
+            scope: PRIVILEGED_ROLES.includes(req.user.role)
+                ? 'all'
+                : 'department',
+            department: PRIVILEGED_ROLES.includes(req.user.role)
+                ? (department || null)
+                : departmentFilter,
             count: records.length,
             data: records,
         });

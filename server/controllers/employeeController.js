@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Employee = require('../models/Employee');
+const Department = require('../models/Department');
 
 // GET /api/employees
 exports.getAll = async (req, res, next) => {
@@ -66,11 +67,42 @@ exports.update = async (req, res, next) => {
     if (!employee) return res.status(404).json({ success: false, message: 'Employee not found.' });
 
     const isSelf = employee.user.toString() === req.user._id.toString();
-    const isPriv = ['admin', 'superuser', 'hr'].includes(req.user.role);
+    const isPriv = ['admin', 'hr'].includes(req.user.role);
     if (!isSelf && !isPriv) return res.status(403).json({ success: false, message: 'Access denied.' });
 
     // Strip salary changes for non-admin
     if (req.user.role === 'employee') delete req.body.salary;
+
+    // Empty-string date inputs (unset HTML date fields) must not be cast -
+    // Mongoose throws on "" -> Date. Treat empty as no "no change"
+    if (req.body.dateOfBirth === '') delete req.body.dateOfBirth;
+    if (req.body.startDate === '') delete req.body.startDate;
+    if (req.body.endDate === '') delete req.body.endDae;
+    
+    //Department/manager reassignment : HR/admin only.
+    if (!isPriv) {
+      delete req.body.department;
+      delete req.body.manager;
+    }
+
+    // Position: HR/admin, or a amanager editing one of their own direct reports.
+    const isManagerOfRecord =
+      req.user.role === 'manager' &&
+      employee.manager?.toString() === req.user._id.toString();
+
+    if (!isPriv && !isManagerOfRecord) {
+      delete req.body.position;
+    }
+
+    if (req.body.department) {
+      const dept = await Department.findOne({ name: req.body.department, isActive: true });
+      if (!dept) {
+        return res.status(400).json({
+          success: false,
+          message: `Department "${req.body.department}" does not exist or is inactive.`,
+        });
+      }
+    }
 
     const restricted = ['user', 'employeeId'];
     restricted.forEach(f => delete req.body[f]);
@@ -96,9 +128,26 @@ exports.deactivate = async (req, res, next) => {
   try {
     const employee = await Employee.findById(req.params.id);
     if (!employee) return res.status(404).json({ success: false, message: 'Employee not found.' });
-    employee.status = 'terminated';
+
+    if (employee.status === 'terminated') {
+      return res.status(409).json({ success: false, message: 'Employee is already terminated.' });
+    }
+
+    if (employee.status === 'offboarding') {
+      return res.status(409).json({
+        success: false,
+        message: 'Employee has an offboarding process in progress. Use the offboarding workflow to finalize termination, not deactivate.',
+      });
+    }
+
+    employee.status = 'suspended';
     await employee.save();
+
     await User.findByIdAndUpdate(employee.user, { isActive: false });
-    res.status(200).json({ success: true, message: 'Employee deactivated.' });
+
+    res.status(200).json({
+      success: true,
+      message: 'Employee suspended. This is reversible — for permanent termination, use the offboarding process.',
+    });
   } catch (err) { next(err); }
 };
