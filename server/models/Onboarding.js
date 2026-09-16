@@ -24,9 +24,11 @@ const onboardingSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 onboardingSchema.methods.calculateProgress = function () {
-  if (!this.tasks.length) return 0;
-  const done = this.tasks.filter(t => t.completed).length;
-  return Math.round((done / this.tasks.length) * 100);
+  const requiredTasks = this.tasks.filter(t => t.required);
+  if (!requiredTasks.length) return 100;
+
+  const done = requiredTasks.filter(t => t.completed).length;
+  return Math.round((done / requiredTasks.length) * 100);
 };
 
 module.exports = mongoose.model('Onboarding', onboardingSchema);

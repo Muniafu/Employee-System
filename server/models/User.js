@@ -26,9 +26,38 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: true,
       minlength: 8,
       select: false,
+      required: function () {
+        return this.linkedAccounts.length === 0;
+      },
+    },
+
+    linkedAccounts: [
+      {
+        provider: {
+          type: String,
+          enum: ['google', 'facebook', 'github', 'linkedin', 'microsoft'],
+          required: true,
+        },
+        providerId: {
+          type: String,
+          required: true,
+        },
+        email: String,
+        linkedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
+    // Pending cross-account link, awaiting confirmation from the EXISTING account's inbox
+    pendingLink: {
+      provider: { type: String, select: false },
+      providerId: { type: String, select: false },
+      token: { type: String, select: false },
+      expires: { type: Date, select: false },
     },
 
     role: {
@@ -38,12 +67,11 @@ const userSchema = new mongoose.Schema(
         'manager',
         'hr',
         'admin',
-        'superuser',
       ],
       default: 'employee',
     },
 
-    // ENTERPRISE ACCOUNT APPROVAL LIFECYCLE
+    // ENTERPRISE ACCOUNT APPROVAL / LIFECYCLE
     status: {
       type: String,
       enum: [
@@ -51,8 +79,18 @@ const userSchema = new mongoose.Schema(
         'APPROVED',
         'REJECTED',
         'SUSPENDED',
+        'TERMINATED',
       ],
       default: 'PENDING',
+    },
+
+    // Set only when status transitions to TERMINATED.
+    terminatedAt: {
+      type: Date,
+    },
+
+    terminatedReason: {
+      type: String,
     },
 
     isActive: {
@@ -194,9 +232,44 @@ userSchema.methods.changedPasswordAfter = function (jwtTimestamp) {
   return false;
 };
 
+userSchema.methods.createPendingLinkToken = function (provider, providerId) {
+  const raw = crypto.randomBytes(32).toString('hex');
+  this.pendingLink = {
+    provider,
+    providerId,
+    token: crypto.createHash('sha256').update(raw).digest('hex'),
+    expires: Date.now() + 30 * 60 * 1000,
+  };
+  return raw;
+};
+
+/*
+|--------------------------------------------------------------------------
+| ACCOUNT LIFECYCLE HELPERS
+|--------------------------------------------------------------------------
+| Used by admin-controlled status transitions (suspend / terminate /
+| reinstate). Kept on the model so every caller applies the same rules
+| instead of setting `status` directly in controllers.
+*/
+
+userSchema.methods.terminate = function (reason) {
+  this.status = 'TERMINATED';
+  this.terminatedAt = new Date();
+  this.terminatedReason = reason || undefined;
+};
+
+userSchema.methods.reinstate = function () {
+  this.status = 'APPROVED';
+  this.terminatedAt = undefined;
+  this.terminatedReason = undefined;
+};
+
 userSchema.index({
     passwordResetToken: 1,
     passwordResetExpires: 1,
 });
+
+userSchema.index({ 'linkedAccounts.provider': 1, 'linkedAccounts.providerId': 1 });
+userSchema.index({ 'pendingLink.token': 1 });
 
 module.exports = mongoose.model('User', userSchema);

@@ -98,8 +98,7 @@ function(next){
     if(
         this.clockIn &&
         this.clockOut &&
-        this.clockOut <
-        this.clockIn
+        this.clockOut < this.clockIn
     ){
         return next(
             new Error(

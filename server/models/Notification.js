@@ -31,6 +31,8 @@ const notificationSchema =
           'attendance',
           'wellness',
           'engagement',
+          'account',
+          'social',
           'system',
         ],
 

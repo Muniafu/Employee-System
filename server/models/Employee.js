@@ -224,12 +224,16 @@ const employeeSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
+        'pending',
+        'onboarding',
         'active',
         'probation',
         'on_leave',
+        'suspended',
+        'offboarding',
         'terminated',
       ],
-      default: 'active',
+      default: 'pending',
     },
 
     salary: {
@@ -327,6 +331,10 @@ const employeeSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+employeeSchema.methods.isPayrollEligible = function () {
+  return this.payrollProfile?.eligible !== false;
+};
 
 employeeSchema.pre('save', function (next) {
   if (!this.employeeId) {
