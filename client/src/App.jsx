@@ -12,10 +12,15 @@ import Register from './pages/Auth/Register.jsx';
 import PendingApproval from './pages/Auth/PendingApproval.jsx';
 import AccountRejected from './pages/Auth/AccountRejected.jsx';
 import AccountSuspended from './pages/Auth/AccountSuspended.jsx';
+import AccountTerminated from './pages/Auth/AccountTerminated.jsx';
 import Unauthorized from './pages/Auth/Unauthorized.jsx';
 import ForgotPassword from './pages/Auth/ForgotPassword.jsx';
 import ResetPassword from './pages/Auth/ResetPassword.jsx';
 import VerifyEmail from './pages/Auth/VerifyEmail.jsx';
+import VerifyEmailRequired from './pages/Auth/VerifyEmailRequired.jsx';
+import OAuthCallback from './pages/Auth/OAuthCallback.jsx';
+import ConfirmLink from './pages/Auth/ConfirmLink.jsx';
+import SocialPending from './pages/Auth/SocialPending.jsx';
 
 // Dashboard
 import Dashboard from './components/Dashboard.jsx';
@@ -156,11 +161,16 @@ export default function App() {
 
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/verify-email/:token" element={<VerifyEmail />} />
+            <Route path="/verify-email-required" element={<VerifyEmailRequired />} />
+            <Route path="/oauth-callback" element={<OAuthCallback />} />
+            <Route path="/confirm-link/:token" element={<ConfirmLink />} />
+            <Route path="/social-pending" element={<SocialPending />} />
 
             <Route path="/pending-approval" element={<PendingApproval />} />
             <Route path="/account-rejected" element={<AccountRejected />} />
             <Route path="/account-suspended" element={<AccountSuspended />} />
+            <Route path="/account-terminated" element={<AccountTerminated />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
 
             {/* Authenticated */}
