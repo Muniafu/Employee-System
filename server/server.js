@@ -7,6 +7,7 @@ const path = require('path');
 const http = require('http');
 
 const { Server } = require('socket.io');
+const passport = require('./config/passport');
 
 const {
   PORT,
@@ -33,6 +34,10 @@ const auth =
 const {
   verifyToken,
 } = require('./utils/token');
+
+
+const offboardingScheduler = require
+('./jobs/offboardingScheduler');
 
 const {
   setIO,
@@ -144,6 +149,8 @@ app.use(
   })
 );
 
+app.use(passport.initialize());
+
 app.use('/api/', apiLimiter);
 
 /* ─────────────────────────────────────────────
@@ -194,6 +201,11 @@ app.use(
 app.use(
   '/api/onboarding',
   require('./routes/onboardingRoutes')
+);
+
+app.use(
+  '/api/offboarding',
+  require('./routes/offboardingRoutes')
 );
 
 app.use(
@@ -306,21 +318,14 @@ app.use(errorMiddleware);
 mongoose
   .connect(MONGO_URI)
   .then(() => {
-    logger.info(
-      `MongoDB connected: ${MONGO_URI}`
-    );
+    logger.info(`MongoDB connected: ${MONGO_URI}`);
 
     server.listen(PORT, () => {
-      logger.info(
-        `EMS Server running on http://localhost:${PORT} [${NODE_ENV}]`
-      );
+      logger.info(`EMS Server running on http://localhost:${PORT} [${NODE_ENV}]`);
     });
   })
   .catch((err) => {
-    logger.error(
-      `DB connection failed: ${err.message}`
-    );
-
+    logger.error(`DB connection failed: ${err.message}`);
     process.exit(1);
   });
 
