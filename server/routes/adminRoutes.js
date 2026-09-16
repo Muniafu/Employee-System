@@ -17,7 +17,6 @@ router.get(
   '/dashboard',
   authorize(
     'admin',
-    'superuser',
     'hr'
   ),
   c.summary
@@ -27,7 +26,6 @@ router.get(
   '/audit',
   authorize(
     'admin',
-    'superuser'
   ),
   c.auditLog
 );
@@ -37,7 +35,6 @@ router.get(
   '/users',
   authorize(
     'admin',
-    'superuser',
     'hr'
   ),
   c.getAllUsers
@@ -47,7 +44,6 @@ router.patch(
   '/users/:id/approve',
   authorize(
     'admin',
-    'superuser',
     'hr'
   ),
   c.approveUser
@@ -57,7 +53,6 @@ router.patch(
   '/users/:id/reject',
   authorize(
     'admin',
-    'superuser',
     'hr'
   ),
   c.rejectUser
@@ -67,25 +62,44 @@ router.patch(
   '/users/:id/suspend',
   authorize(
     'admin',
-    'superuser'
   ),
   c.suspendUser
+);
+
+router.patch(
+  '/users/:id/terminate',
+  authorize(
+    'admin',
+  ),
+  c.terminateUser
+);
+
+router.patch(
+  '/users/:id/reinstate',
+  authorize(
+    'admin',
+  ),
+  c.reinstateUser
 );
 
 router.patch(
   '/users/:id/role',
   authorize(
     'admin',
-    'superuser'
   ),
   c.changeRole
 );
 
 router.patch(
+  '/users/:id/reactivate', 
+  authorize('admin',
+  ),
+  c.reactivateUser);
+
+router.patch(
   '/users/:id/toggle-active',
   authorize(
     'admin',
-    'superuser'
   ),
   c.toggleActive
 );
@@ -100,7 +114,6 @@ router.post(
   '/departments',
   authorize(
     'admin',
-    'superuser'
   ),
   c.createDepartment
 );
@@ -109,7 +122,6 @@ router.put(
   '/departments/:id',
   authorize(
     'admin',
-    'superuser'
   ),
   c.updateDepartment
 );
@@ -124,7 +136,6 @@ router.post(
   '/policies',
   authorize(
     'admin',
-    'superuser',
     'hr'
   ),
   c.createPolicy
