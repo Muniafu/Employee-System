@@ -9,10 +9,17 @@ export const getAllUsers =
       params: p,
     });
 
+export const reactivateUser = 
+  (id) => 
+    api.patch(`/admin/users/${
+      id}/reactivate`
+    );
+
 export const approveUser =
-  (id) =>
+  (id, data) =>
     api.patch(
-      `/admin/users/${id}/approve`
+      `/admin/users/${id}/approve`, 
+      data
     );
 
 export const rejectUser =
