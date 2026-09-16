@@ -13,6 +13,7 @@ import {
   HeartPulse,
   ShieldCheck,
   Rocket,
+  PackageMinus,
   Users,
   BarChart3,
   Settings,
@@ -20,124 +21,57 @@ import {
   Building2,
 } from "lucide-react";
 
+const ALL_ROLES = ["employee", "manager", "hr", "admin", "superuser"];
+const PRIVILEGED = ["admin", "hr", "superuser"];
+
+/**
+ * IMPORTANT: `roles` here must mirror the `roles` prop passed to
+ * <RequireAuth> for the matching route in App.jsx. If a role can't
+ * see a link, they shouldn't be able to open the route either — and
+ * vice versa, a route that allows a role should surface a link for it.
+ */
 const NAVIGATION = [
   {
     section: "Main",
-    roles: [
-      "employee",
-      "manager",
-      "hr",
-      "admin",
-      "superuser",
-    ],
     links: [
-      {
-        to: "/dashboard",
-        icon: LayoutDashboard,
-        label: "Dashboard",
-      },
-      {
-        to: "/attendance",
-        icon: Clock3,
-        label: "Attendance",
-      },
-      {
-        to: "/leave",
-        icon: Plane,
-        label: "Leave",
-      },
-      {
-        to: "/payroll",
-        icon: Wallet,
-        label: "Payroll",
-      },
+      { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ALL_ROLES },
+      { to: "/attendance", icon: Clock3, label: "Attendance", roles: ALL_ROLES },
+      { to: "/leave", icon: Plane, label: "Leave", roles: ALL_ROLES },
+      { to: "/payroll", icon: Wallet, label: "Payroll", roles: ALL_ROLES },
     ],
   },
 
   {
     section: "Development",
-    roles: [
-      "employee",
-      "manager",
-      "hr",
-      "admin",
-      "superuser",
-    ],
     links: [
-      {
-        to: "/performance",
-        icon: Target,
-        label: "Performance",
-      },
-      {
-        to: "/learning",
-        icon: BookOpen,
-        label: "Learning",
-      },
-      {
-        to: "/career",
-        icon: BriefcaseBusiness,
-        label: "Career",
-      },
+      { to: "/performance", icon: Target, label: "Performance", roles: ALL_ROLES },
+      { to: "/learning", icon: BookOpen, label: "Learning", roles: ALL_ROLES },
+      { to: "/career", icon: BriefcaseBusiness, label: "Career", roles: ALL_ROLES },
     ],
   },
 
   {
     section: "Organisation",
-    roles: [
-      "employee",
-      "manager",
-      "hr",
-      "admin",
-      "superuser",
-    ],
     links: [
-      {
-        to: "/engagement",
-        icon: Brain,
-        label: "Engagement",
-      },
-      {
-        to: "/wellness",
-        icon: HeartPulse,
-        label: "Wellness",
-      },
-      {
-        to: "/compliance",
-        icon: ShieldCheck,
-        label: "Compliance",
-      },
-      {
-        to: "/onboarding",
-        icon: Rocket,
-        label: "Onboarding",
-      },
+      { to: "/engagement", icon: Brain, label: "Engagement", roles: ALL_ROLES },
+      { to: "/wellness", icon: HeartPulse, label: "Wellness", roles: ALL_ROLES },
+      { to: "/compliance", icon: ShieldCheck, label: "Compliance", roles: ALL_ROLES },
+      // Self-service for everyone (own onboarding/offboarding); the pages
+      // themselves further branch admin/hr/manager views internally.
+      { to: "/onboarding", icon: Rocket, label: "Onboarding", roles: ALL_ROLES },
+      { to: "/offboarding", icon: PackageMinus, label: "Offboarding", roles: ALL_ROLES },
     ],
   },
 
   {
     section: "Administration",
-    roles: [
-      "admin",
-      "hr",
-      "superuser",
-    ],
     links: [
-      {
-        to: "/employees",
-        icon: Users,
-        label: "Employees",
-      },
-      {
-        to: "/analytics",
-        icon: BarChart3,
-        label: "Analytics",
-      },
-      {
-        to: "/admin",
-        icon: Settings,
-        label: "Admin Panel",
-      },
+      // Matches App.jsx: roles={['admin','superuser','hr','manager']}
+      { to: "/employees", icon: Users, label: "Employees", roles: ["admin", "superuser", "hr", "manager"] },
+      // Matches App.jsx: roles={['admin','superuser','hr']}
+      { to: "/analytics", icon: BarChart3, label: "Analytics", roles: PRIVILEGED },
+      // Matches App.jsx: roles={['admin','superuser']} — NOT hr
+      { to: "/admin", icon: Settings, label: "Admin Panel", roles: ["admin", "superuser"] },
     ],
   },
 ];
@@ -149,11 +83,15 @@ export default function Sidebar({
 }) {
   const { user, logout } = useAuth();
 
-  const sections = NAVIGATION.filter((section) =>
-    section.roles.includes(
-      (user?.role || "").toLowerCase()
-    )
-  );
+  const role = (user?.role || "").toLowerCase();
+
+  // Build sections filtered link-by-link, then drop any section left empty.
+  const sections = NAVIGATION
+    .map((section) => ({
+      ...section,
+      links: section.links.filter((link) => link.roles.includes(role)),
+    }))
+    .filter((section) => section.links.length > 0);
 
   return (
     <>

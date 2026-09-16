@@ -412,7 +412,7 @@ export default function Dashboard() {
         <div className="dashboard-section-sm">
           <div className="grid-3">
             <div className="card card-body">
-              <h3 clasName="section-title">
+              <h3 className="section-title">
                 Headcount by Department
               </h3>
 

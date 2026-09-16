@@ -8,7 +8,8 @@ import {
   registerAdmin,
   approveUser,
   rejectUser,
-  suspendUser
+  suspendUser,
+  reactivateUser,
 } from '../../services/adminService';
 
 import { getError } from '../../services/api';
@@ -31,6 +32,17 @@ const DEPTS = [
   'Legal',
   'Other'
 ];
+
+const EMPLOYEE_STATUS_BADGE = {
+  pending: 'badge-neutral',
+  onboarding: 'badge-primary',
+  active: 'badge-success',
+  probation: 'badge-warning',
+  on_leave: 'badge-warning',
+  suspended: 'badge-neutral',
+  offboarding: 'badge-warning',
+  terminated: 'badge-danger',
+};
 
 export default function AdminPanel() {
   const [tab, setTab] = useState('users');
@@ -58,6 +70,21 @@ export default function AdminPanel() {
   });
 
   const [addLoading, setAddLoading] = useState(false);
+
+  /**
+   * APPROVE FLOW
+   * Approving a PENDING user now requires department / position / manager,
+   * since these feed directly into the Employee record created on approval
+   * and into onboarding's department-specific task templates.
+   */
+  const [showApprove, setShowApprove] = useState(null); // holds the user being approved, or null
+  const [approveForm, setApproveForm] = useState({
+    department: '',
+    position: '',
+    managerId: ''
+  });
+  const [managers, setManagers] = useState([]);
+  const [approveLoading, setApproveLoading] = useState(false);
 
   /**
    * LOAD USERS
@@ -107,6 +134,16 @@ export default function AdminPanel() {
   }, [tab]);
 
   /**
+   * MANAGER LIST — used to populate the "Manager" select in the Approve modal.
+   * Loaded once on mount rather than on every approve-open.
+   */
+  useEffect(() => {
+    getAllUsers({ role: 'manager', status: 'APPROVED' })
+      .then((r) => setManagers(r.data.data || []))
+      .catch(() => {});
+  }, []);
+
+  /**
    * ROLE CHANGE
    */
   const handleRoleChange = async (userId, role) => {
@@ -122,19 +159,78 @@ export default function AdminPanel() {
   };
 
   /**
-   * TOGGLE ACTIVE
+   * APPROVE — opens modal to collect department/position/manager first
    */
-  // const handleToggle = async (userId) => {
-  //   try {
-  //     await toggleActive(userId);
+  const openApprove = (user) => {
+    setApproveForm({ department: '', position: '', managerId: '' });
+    setShowApprove(user);
+  };
 
-  //     toast.success('Status updated.');
+  const handleApprove = async (e) => {
+    e.preventDefault();
 
-  //     loadUsers();
-  //   } catch (err) {
-  //     toast.error(getError(err));
-  //   }
-  // };
+    setApproveLoading(true);
+
+    try {
+      await approveUser(showApprove._id, approveForm);
+
+      toast.success('User approved — employee record created, pending onboarding.');
+
+      setShowApprove(null);
+
+      loadUsers();
+    } catch (err) {
+      toast.error(getError(err));
+    } finally {
+      setApproveLoading(false);
+    }
+  };
+
+  /**
+   * REJECT
+   */
+  const handleReject = async (userId) => {
+    try {
+      await rejectUser(userId);
+
+      toast.success('User rejected.');
+
+      loadUsers();
+    } catch (err) {
+      toast.error(getError(err));
+    }
+  };
+
+  /**
+   * SUSPEND
+   */
+  const handleSuspend = async (userId) => {
+    try {
+      await suspendUser(userId);
+
+      toast.success('User suspended.');
+
+      loadUsers();
+    } catch (err) {
+      toast.error(getError(err));
+    }
+  };
+
+  /**
+   * REACTIVATE — reverses a suspension. Blocked server-side if the
+   * employee was terminated via the offboarding workflow.
+   */
+  const handleReactivate = async (userId) => {
+    try {
+      await reactivateUser(userId);
+
+      toast.success('User reactivated.');
+
+      loadUsers();
+    } catch (err) {
+      toast.error(getError(err));
+    }
+  };
 
   /**
    * CREATE ADMIN / STAFF ACCOUNT
@@ -234,7 +330,7 @@ export default function AdminPanel() {
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
               >
-              
+
                 <option value="">All Roles</option>
 
                 {ROLES.map((r) => (
@@ -326,7 +422,7 @@ export default function AdminPanel() {
               },
 
               {
-              label: 'Account Status',
+                label: 'Account Status',
                 render: (u) => {
 
                   const map = {
@@ -344,6 +440,31 @@ export default function AdminPanel() {
                       }`}
                     >
                       {u.status}
+                    </span>
+                  );
+                }
+              },
+
+              {
+                label: 'Employee Status',
+                render: (u) => {
+                  if (!u.employeeStatus) {
+                    return (
+                      <span style={{ color: 'var(--color-text-muted)' }}>
+                        —
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <span
+                      className={`badge ${
+                        EMPLOYEE_STATUS_BADGE[u.employeeStatus] ||
+                        'badge-neutral'
+                      }`}
+                      style={{ textTransform: 'capitalize' }}
+                    >
+                      {u.employeeStatus.replace('_', ' ')}
                     </span>
                   );
                 }
@@ -375,78 +496,60 @@ export default function AdminPanel() {
                       <>
                         <button
                           className="btn btn-success btn-sm"
-                          onClick={async () => {
-                            try {
-
-                              await approveUser(u._id);
-
-                              toast.success(
-                                'User approved.'
-                              );
-
-                              loadUsers();
-
-                            } catch (err) {
-
-                              toast.error(
-                                getError(err)
-                              );
-                            }
-                          }}
+                          onClick={() => openApprove(u)}
                         >
                           Approve
                         </button>
 
                         <button
                           className="btn btn-danger btn-sm"
-                          onClick={async () => {
-                            try {
-
-                              await rejectUser(u._id);
-
-                              toast.success(
-                                'User rejected.'
-                              );
-
-                              loadUsers();
-
-                            } catch (err) {
-
-                              toast.error(
-                                getError(err)
-                              );
-                            }
-                          }}
+                          onClick={() => handleReject(u._id)}
                         >
                           Reject
                         </button>
                       </>
                     )}
 
-                    {u.status === 'APPROVED' && (
+                    {u.status === 'APPROVED' &&
+                      u.employeeStatus !== 'offboarding' &&
+                      u.employeeStatus !== 'terminated' && (
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => handleSuspend(u._id)}
+                        >
+                          Suspend
+                        </button>
+                    )}
+
+                    {u.status === 'SUSPENDED' && (
                       <button
-                        className="btn btn-outline btn-sm"
-                        onClick={async () => {
-                          try {
+                        className="btn btn-success btn-sm"
+                        onClick={() => handleReactivate(u._id)}
+                      >
+                        Reactivate
+                      </button>
+                    )}
 
-                            await suspendUser(u._id);
-
-                            toast.success(
-                              'User suspended.'
-                            );
-
-                            loadUsers();
-
-                          } catch (err) {
-
-                            toast.error(
-                              getError(err)
-                            );
-                          }
+                    {u.employeeStatus === 'terminated' && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--color-text-muted)'
                         }}
                       >
-                        Suspend
-                      </button>
+                        Terminated via offboarding
+                      </span>
+                    )}
+
+                    {u.employeeStatus === 'offboarding' && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--color-text-muted)'
+                        }}
+                      >
+                        Offboarding in progress
+                      </span>
                     )}
                   </div>
                 )
@@ -594,6 +697,111 @@ export default function AdminPanel() {
           </div>
         </div>
       )}
+
+      {/* APPROVE MODAL — collects department/position/manager before
+          creating the Employee record via approveUser() */}
+      <Modal
+        open={!!showApprove}
+        onClose={() => setShowApprove(null)}
+        title={`Approve ${showApprove?.firstName || ''} ${showApprove?.lastName || ''}`}
+        footer={
+          <>
+            <button
+              className="btn btn-outline"
+              onClick={() => setShowApprove(null)}
+            >
+              Cancel
+            </button>
+
+            <button
+              className="btn btn-primary"
+              form="approve-form"
+              type="submit"
+              disabled={approveLoading}
+            >
+              {approveLoading ? (
+                <span
+                  className="spinner"
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderWidth: 2
+                  }}
+                />
+              ) : null}
+              Approve
+            </button>
+          </>
+        }
+      >
+        <form id="approve-form" onSubmit={handleApprove}>
+          <div className="form-group">
+            <label className="form-label">Department *</label>
+
+            <select
+              className="form-control form-select"
+              value={approveForm.department}
+              onChange={(e) =>
+                setApproveForm((p) => ({
+                  ...p,
+                  department: e.target.value
+                }))
+              }
+              required
+            >
+              <option value="">Select…</option>
+
+              {DEPTS.map((d) => (
+                <option key={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Position</label>
+
+            <input
+              className="form-control"
+              value={approveForm.position}
+              onChange={(e) =>
+                setApproveForm((p) => ({
+                  ...p,
+                  position: e.target.value
+                }))
+              }
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Manager</label>
+
+            <select
+              className="form-control form-select"
+              value={approveForm.managerId}
+              onChange={(e) =>
+                setApproveForm((p) => ({
+                  ...p,
+                  managerId: e.target.value
+                }))
+              }
+            >
+              <option value="">No manager assigned</option>
+
+              {managers.map((m) => (
+                <option key={m._id} value={m._id}>
+                  {m.firstName} {m.lastName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="alert alert-warning" style={{ marginTop: 8 }}>
+            This creates the employee record as <strong>pending</strong> — you`ll
+            still need to initiate onboarding from the Onboarding page to
+            activate them.
+          </div>
+        </form>
+      </Modal>
 
       {/* CREATE ACCOUNT MODAL */}
       <Modal
