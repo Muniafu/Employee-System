@@ -224,7 +224,7 @@ exports.register = async (req, res, next) => {
 
       try {
         const admins = await User.find({
-          role: { $in: ['admin', 'superuser', 'hr'] },
+          role: { $in: ['admin', 'hr'] },
           status: 'APPROVED',
         }).select('_id email');
 

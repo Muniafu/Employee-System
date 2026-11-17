@@ -177,6 +177,23 @@ class PayrollController {
 
         }
 
+        /* Employees may only view their own payslips.
+           HR/admin are already gated by the route. */
+        if (req.user.role === 'employee') {
+
+            const ownerId =
+                payroll.employee?.user?._id ||
+                payroll.employee?.user;
+
+            if (!ownerId || ownerId.toString() !== req.user._id.toString()) {
+                return Response.forbidden(
+                    res,
+                    'You can only view your own payslips.'
+                );
+            }
+
+        }
+
         return Response.success(
             res,
             payroll

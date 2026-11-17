@@ -77,7 +77,7 @@ exports.update = async (req, res, next) => {
     // Mongoose throws on "" -> Date. Treat empty as no "no change"
     if (req.body.dateOfBirth === '') delete req.body.dateOfBirth;
     if (req.body.startDate === '') delete req.body.startDate;
-    if (req.body.endDate === '') delete req.body.endDae;
+    if (req.body.endDate === '') delete req.body.endDate;
     
     //Department/manager reassignment : HR/admin only.
     if (!isPriv) {
@@ -86,8 +86,10 @@ exports.update = async (req, res, next) => {
     }
 
     // Position: HR/admin, or a amanager editing one of their own direct reports.
+     // employee.manager references an Employee doc, so compare against req.user.employeeId.
     const isManagerOfRecord =
       req.user.role === 'manager' &&
+      req.user.employeeId &&
       employee.manager?.toString() === req.user._id.toString();
 
     if (!isPriv && !isManagerOfRecord) {

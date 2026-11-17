@@ -775,7 +775,6 @@ exports.getAll = async (
 
         const PRIVILEGED_ROLES = [
             'admin',
-            'superuser',
             'hr',
         ];
 

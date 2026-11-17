@@ -157,7 +157,7 @@ exports.cancel = async (req, res, next) => {
     const leave = await Leave.findById(req.params.id).populate('employee');
     if (!leave) return res.status(404).json({ success: false, message: 'Leave not found.' });
     const isOwner = leave.employee.user.toString() === req.user._id.toString();
-    if (!isOwner && !['admin', 'hr', 'superuser'].includes(req.user.role)) return res.status(403).json({ success: false, message: 'Access denied.' });
+    if (!isOwner && !['admin', 'hr'].includes(req.user.role)) return res.status(403).json({ success: false, message: 'Access denied.' });
     if (leave.status !== 'pending') return res.status(400).json({ success: false, message: 'Only pending leaves can be cancelled.' });
     leave.status = 'cancelled';
     await leave.save();
