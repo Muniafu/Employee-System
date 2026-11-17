@@ -49,14 +49,14 @@ const errorResponse = (
 
 /*
 =========================================================
-BACKWARD COMPATIBILITY
+SHORT-HAND HELPERS (data-first, used by payrollController)
 =========================================================
 */
 
 const success = (
     res,
-    message = 'Success',
     data = null,
+    message = 'Success',
     statusCode = 200
 ) => successResponse(
     res,
@@ -64,6 +64,32 @@ const success = (
     message,
     data
 );
+
+const created = (
+    res,
+    data = null,
+    message = 'Created successfully.'
+) => success(res, data, message, 201);
+
+const notFound = (
+    res,
+    message = 'Resource not found.'
+) => errorResponse(res, message, 404);
+
+const badRequest = (
+    res,
+    message = 'Bad request.'
+) => errorResponse(res, message, 400);
+
+const unauthorized = (
+    res,
+    message = 'Unauthorized.'
+) => errorResponse(res, message, 401);
+
+const forbidden = (
+    res,
+    message = 'Access denied.'
+) => errorResponse(res, message, 403);
 
 const error = (
     res,
@@ -78,11 +104,13 @@ const error = (
     });
 
 module.exports = {
-
     successResponse,
     errorResponse,
-
     success,
+    created,
+    notFound,
+    badRequest,
+    unauthorized,
+    forbidden,
     error,
-
 };
