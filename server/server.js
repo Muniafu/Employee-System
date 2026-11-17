@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
 const http = require('http');
+const fs = require('fs');
 
 const { Server } = require('socket.io');
 const passport = require('./config/passport');
@@ -36,8 +37,8 @@ const {
 } = require('./utils/token');
 
 
-const offboardingScheduler = require
-('./jobs/offboardingScheduler');
+const offboardingScheduler =
+  require('./jobs/offboardingScheduler');
 
 const {
   setIO,
@@ -45,7 +46,18 @@ const {
   removeUserSocket,
 } = require('./socket/socketManager');
 
+const CLIENT_URL =
+  process.env.CLIENT_URL || 'http://localhost:5173';
+
+const corsOrigins = CLIENT_URL.split(',').map((o) => o.trim());
+
 const app = express();
+
+/* Behind a reverse proxy (Render/Heroku/Nginx) in production, trust the
+   first proxy hop so express-rate-limit sees real client IPs. */
+if (NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 const server =
   http.createServer(app);
@@ -56,7 +68,7 @@ const server =
 
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: corsOrigins,
     credentials: true,
   },
 });
@@ -123,7 +135,7 @@ app.use(
 
 app.use(
   cors({
-    origin: 'http://localhost:5173',
+    origin: corsOrigins,
     credentials: true,
   })
 );
@@ -295,7 +307,24 @@ app.get(
 );
 
 /* ─────────────────────────────────────────────
-   404
+   PRODUCTION SPA SERVING (optional)
+   If the client production build exists, serve it
+   with an SPA fallback so one deployment works.
+   Must be registered BEFORE the 404 catch-all.
+───────────────────────────────────────────── */
+
+const clientDist = path.join(__dirname, '..', 'client', 'dist');
+
+if (fs.existsSync(path.join(clientDist, 'index.html'))) {
+  app.use(express.static(clientDist));
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api/')) return next();
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
+
+/* ─────────────────────────────────────────────
+   404 (API only — SPA routes are handled above)
 ───────────────────────────────────────────── */
 
 app.use((req, res) => {
@@ -318,7 +347,9 @@ app.use(errorMiddleware);
 mongoose
   .connect(MONGO_URI)
   .then(() => {
-    logger.info(`MongoDB connected: ${MONGO_URI}`);
+        logger.info(`MongoDB connected: ${MONGO_URI}`);
+
+    offboardingScheduler.start();
 
     server.listen(PORT, () => {
       logger.info(`EMS Server running on http://localhost:${PORT} [${NODE_ENV}]`);

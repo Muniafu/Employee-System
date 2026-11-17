@@ -21,6 +21,32 @@ if (missing.length) {
   );
 }
 
+const NODE_ENV = process.env.NODE_ENV || 'development';
+
+/* Weak JWT secrets let anyone forge admin tokens. Block the
+   placeholder outright, and enforce a minimum length in production. */
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (
+  !JWT_SECRET ||
+  JWT_SECRET === 'change_this_to_a_long_random_secret_key' ||
+  JWT_SECRET.length < 32
+) {
+  if (NODE_ENV === 'production') {
+    throw new Error(
+      'JWT_SECRET must be set to a strong random value (32+ chars) in production.'
+    );
+  }
+  console.warn(
+    '[env] WARNING: JWT_SECRET is weak or a placeholder — set a strong random value before deploying.'
+  );
+}
+
+/* Email links and OAuth redirects are built from CLIENT_URL. */
+if (NODE_ENV === 'production' && !process.env.CLIENT_URL) {
+  throw new Error('CLIENT_URL is required in production (used for email links and CORS).');
+}
+
 module.exports = {
   PORT: process.env.PORT,
   NODE_ENV: process.env.NODE_ENV || 'development',
