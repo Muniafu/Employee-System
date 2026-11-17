@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { X } from "lucide-react";
 
 export default function Modal({
   open,
@@ -35,8 +36,9 @@ export default function Modal({
             type="button"
             className="btn btn-ghost btn-icon"
             onClick={onClose}
+            aria-label="Close"
           >
-            ✕
+            <X size={20} />
           </button>
         </div>
 

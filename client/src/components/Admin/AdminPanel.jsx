@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
+import { Settings} from 'lucide-react';
+
 import {
   getAllUsers,
   changeRole,
@@ -272,7 +274,9 @@ export default function AdminPanel() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Admin Panel ⚙️</h1>
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Settings size={24} className="page-title-icon" /> Admin Panel
+          </h1>
 
           <p className="page-subtitle">
             User management, departments, and audit trail

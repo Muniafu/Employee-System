@@ -21,8 +21,8 @@ import {
   Building2,
 } from "lucide-react";
 
-const ALL_ROLES = ["employee", "manager", "hr", "admin", "superuser"];
-const PRIVILEGED = ["admin", "hr", "superuser"];
+const ALL_ROLES = ["employee", "manager", "hr", "admin"];
+const PRIVILEGED = ["admin", "hr"];
 
 /**
  * IMPORTANT: `roles` here must mirror the `roles` prop passed to
@@ -67,11 +67,11 @@ const NAVIGATION = [
     section: "Administration",
     links: [
       // Matches App.jsx: roles={['admin','superuser','hr','manager']}
-      { to: "/employees", icon: Users, label: "Employees", roles: ["admin", "superuser", "hr", "manager"] },
+      { to: "/employees", icon: Users, label: "Employees", roles: ["admin", "hr", "manager"] },
       // Matches App.jsx: roles={['admin','superuser','hr']}
       { to: "/analytics", icon: BarChart3, label: "Analytics", roles: PRIVILEGED },
       // Matches App.jsx: roles={['admin','superuser']} — NOT hr
-      { to: "/admin", icon: Settings, label: "Admin Panel", roles: ["admin", "superuser"] },
+      { to: "/admin", icon: Settings, label: "Admin Panel", roles: ["admin"] },
     ],
   },
 ];
