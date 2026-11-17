@@ -79,7 +79,7 @@ exports.handleSocialLogin = async ({ provider, providerId, email, firstName, las
   if (!isFirstUser) {
     try {
       const admins = await User.find({
-        role: { $in: ['superuser', 'admin', 'hr'] },
+        role: { $in: ['admin', 'hr'] },
         status: 'APPROVED',
       }). select('_id email');
 
