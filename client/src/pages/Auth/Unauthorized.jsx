@@ -24,7 +24,7 @@ export default function Unauthorized() {
 
                     <p>
 
-                        Your account doesn't have the
+                        Your account doesn&apos;t have the
                         required permissions.
 
                     </p>

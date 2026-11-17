@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
+import { Palmtree, Check, X } from 'lucide-react';
 import { applyLeave, getLeaves, approveLeave, rejectLeave, cancelLeave } from '../../services/leaveService';
 import { getError } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
@@ -88,7 +89,9 @@ export default function LeaveRequests() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Leave Management 🏖️</h1>
+          <h1 className="page-title" style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <Palmtree size={24} /> Leave Management
+          </h1>
           <p className="page-subtitle">{canManage ? 'Manage all leave requests' : 'Apply and track your leave'}</p>
         </div>
         <button className="btn btn-primary" onClick={()=>setShowApply(true)}>+ Apply for Leave</button>
@@ -126,10 +129,16 @@ export default function LeaveRequests() {
           { label:'Actions', render: l => (
             <div style={{ display:'flex', gap:6 }}>
               {canManage && l.status==='pending' && <>
-                <button className="btn btn-sm btn-success" onClick={()=>handleApprove(l._id)}>✓</button>
-                <button className="btn btn-sm btn-danger" onClick={()=>handleReject(l._id)}>✗</button>
+                <button className="btn btn-sm btn-success" onClick={()=>handleApprove(l._id)} aria-label="Approve">
+                  <Check size={16} />
+                </button>
+                <button className="btn btn-sm btn-danger" onClick={()=>handleReject(l._id)} aria-label="Reject">
+                  <X size={16} />
+                </button>
               </>}
-              {l.status==='pending' && <button className="btn btn-sm btn-outline" onClick={()=>handleCancel(l._id)}>Cancel</button>}
+              {l.status==='pending' && <button className="btn btn-sm btn-outline" onClick={()=>handleCancel(l._id)} aria-label="Cancel">
+                <X size={16} />
+              </button>}
             </div>
           )},
         ]} emptyMsg="No leave records found." />

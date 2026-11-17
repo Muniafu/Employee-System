@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
+import { Mic, Laptop, Lock, BookOpen, Palmtree, Wallet, CheckCircle2, FileText, Paperclip, Check, Package, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { getEmployees } from '../../services/employeeService';
 import { getError } from '../../services/api';
@@ -36,15 +37,15 @@ const CATEGORY_LABEL = {
 };
 
 const CATEGORY_ICON = {
-  exit_interview: '🗣️',
-  asset_return: '💻',
-  access_revocation: '🔒',
-  knowledge_transfer: '📚',
-  leave_clearance: '🌴',
-  payroll: '💰',
-  clearance: '✅',
-  documentation: '📄',
-  other: '📌',
+  exit_interview: '',
+  asset_return: '',
+  access_revocation: '',
+  knowledge_transfer: '',
+  leave_clearance: '',
+  payroll: '',
+  clearance: '',
+  documentation: '',
+  other: '',
 };
 
 const PHASE_LABEL = {
@@ -125,7 +126,7 @@ function TaskRow({ task, disabled, disabledReason, onComplete, busy }) {
                 color: task.completed ? 'var(--color-text-muted)' : 'var(--color-text)',
               }}
             >
-              {CATEGORY_ICON[task.category] || '📌'} {task.title}
+              {CATEGORY_ICON[task.category] || ''} {task.title}
             </span>
             {task.description && (
               <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>{task.description}</p>
@@ -143,7 +144,7 @@ function TaskRow({ task, disabled, disabledReason, onComplete, busy }) {
         </div>
         {task.completed && task.completedAt && (
           <p style={{ fontSize: 11, color: 'var(--success)', marginTop: 4 }}>
-            ✅ Done {new Date(task.completedAt).toLocaleDateString('en-KE')}
+             Done {new Date(task.completedAt).toLocaleDateString('en-KE')}
           </p>
         )}
       </div>
@@ -176,7 +177,7 @@ function TaskGroups({ offboarding, canComplete, onComplete, busyTaskId }) {
               ? '⏳ Waiting on employee'
               : `Assigned to ${task.assignedTo} — not yours to complete`;
           } else if (blocked.length) {
-            disabledReason = `🔒 Blocked until required: ${blocked.join(', ')}`;
+            disabledReason = ` Blocked until required: ${blocked.join(', ')}`;
           }
 
           return (
@@ -244,9 +245,9 @@ function MyOffboarding() {
   if (!record) {
     return (
       <div className="empty-state card card-body">
-        <div className="empty-icon">✅</div>
+        <div className="empty-icon"></div>
         <h3>No active offboarding</h3>
-        <p>You don't have an exit process in progress.</p>
+        <p>You don&apos;t have an exit process in progress.</p>
       </div>
     );
   }
@@ -288,7 +289,7 @@ function MyOffboarding() {
 
       <div className="alert alert-primary" style={{ marginBottom: 16 }}>
         Only tasks assigned to <strong>you</strong> are actionable here. Everything else is being
-        handled by HR, IT, your manager, or Finance — you'll see it update automatically as they complete it.
+        handled by HR, IT, your manager, or Finance — you&apos;ll see it update automatically as they complete it.
       </div>
 
       <TaskGroups
@@ -445,7 +446,7 @@ function StaffOffboarding() {
             <button className="btn btn-outline" style={{ marginBottom: 12 }} onClick={() => setActiveId(null)}>
               ← Back to list
             </button>
-            <h1 className="page-title">{empName || 'Offboarding'} 📦</h1>
+            <h1 className="page-title">{empName || 'Offboarding'} </h1>
             <p className="page-subtitle">
               {TYPE_LABEL[active.type] || active.type} · Last working day{' '}
               {active.lastWorkingDay ? new Date(active.lastWorkingDay).toLocaleDateString('en-KE') : '—'}
@@ -477,7 +478,7 @@ function StaffOffboarding() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <h3 style={{ fontSize: 14, fontWeight: 700 }}>🔒 System Access</h3>
+              <h3 style={{ fontSize: 14, fontWeight: 700 }}> System Access</h3>
               <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 4 }}>
                 {active.accessRevoked
                   ? `Revoked ${new Date(active.accessRevokedAt).toLocaleString('en-KE')}`
@@ -508,7 +509,7 @@ function StaffOffboarding() {
         <div className="card card-body">
           {active.phase === 'completed' ? (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
+              <div style={{ fontSize: 40, marginBottom: 8 }}></div>
               <h3 style={{ fontWeight: 700 }}>Offboarding Complete</h3>
               <p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
                 Approved {new Date(active.approvedAt).toLocaleString('en-KE')}
@@ -541,7 +542,7 @@ function StaffOffboarding() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Offboarding 📦</h1>
+          <h1 className="page-title">Offboarding </h1>
           <p className="page-subtitle">Structured employee exit workflow</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowInitiate(true)}>
@@ -553,9 +554,9 @@ function StaffOffboarding() {
         <div className="spinner-center"><div className="spinner spinner-lg" /></div>
       ) : allOffboarding.length === 0 ? (
         <div className="empty-state card card-body">
-          <div className="empty-icon">📦</div>
+          <div className="empty-icon"></div>
           <h3>No offboarding records</h3>
-          <p>Click "Initiate Offboarding" to start an employee exit.</p>
+          <p>Click &ldquo;...&rdquo; to start an employee exit.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

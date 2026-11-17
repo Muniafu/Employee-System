@@ -14,6 +14,7 @@ import {
   CalendarDays,
   TimerReset,
   AlarmClock,
+  Palmtree,
   Timer,
 } from 'lucide-react';
 
@@ -698,8 +699,8 @@ export default function AttendanceTracker() {
 
       <div>
 
-      <h3>
-      🏖️ Approved Leave
+      <h3 style={{ display:'flex', alignItems:'center', gap:8 }}>
+      <Palmtree size={18} /> Approved Leave
       </h3>
 
       <p>

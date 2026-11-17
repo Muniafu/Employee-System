@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { Star, Target } from 'lucide-react';
 import { createReview, getReviews, submitReview, reviewEmployee } from '../../services/performanceService';
 import { getError } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
@@ -7,7 +8,13 @@ import Modal from '../../components/Modal';
 import Table from '../../components/Table';
 
 const STATUS_BADGE = { draft:'badge-neutral', submitted:'badge-warning', reviewed:'badge-primary', acknowledged:'badge-success' };
-const STAR = n => '★'.repeat(n) + '☆'.repeat(5-n);
+const StarRating = ({ n, color }) => (
+  <span style={{ display: 'inline-flex', gap: 1, verticalAlign: 'middle' }}>
+    {[1,2,3,4,5].map(i => (
+      <Star key={i} size={13} color={color} fill={i <= n ? color : 'none'} />
+    ))}
+  </span>
+);
 
 export default function PerformanceReview() {
   const { isAdmin, isHR, isManager } = useAuth();
@@ -63,7 +70,9 @@ export default function PerformanceReview() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Performance 🎯</h1>
+          <h1 className="page-title" style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <Target size={24} /> Performance
+          </h1>
           <p className="page-subtitle">Goal tracking and periodic reviews</p>
         </div>
         <button className="btn btn-primary" onClick={() => setCreate(true)}>+ New Review</button>
@@ -82,8 +91,8 @@ export default function PerformanceReview() {
           )},
           { label:'Period', key:'period' },
           { label:'Type', render: r => <span className="badge badge-neutral" style={{textTransform:'capitalize'}}>{r.reviewType}</span> },
-          { label:'Self Rating', render: r => r.selfRating ? <span style={{ color:'var(--color-warning)', fontSize:13 }}>{STAR(r.selfRating)}</span> : '—' },
-          { label:'Manager Rating', render: r => r.managerRating ? <span style={{ color:'var(--color-primary)', fontSize:13 }}>{STAR(r.managerRating)}</span> : '—' },
+          { label:'Self Rating', render: r => r.selfRating ? <span style={{ color:'var(--color-warning)', fontSize:13 }}>{StarRating({ n: r.selfRating, color: 'var(--color-warning)' })}</span> : '—' },
+          { label:'Manager Rating', render: r => r.managerRating ? <span style={{ color:'var(--color-primary)', fontSize:13 }}>{StarRating({ n: r.managerRating, color: 'var(--color-primary)' })}</span> : '—' },
           { label:'Goals', render: r => `${r.goals?.filter(g=>g.status==='completed').length||0}/${r.goals?.length||0} done` },
           { label:'Status', render: r => <span className={`badge ${STATUS_BADGE[r.status]||'badge-neutral'}`} style={{textTransform:'capitalize'}}>{r.status}</span> },
           { label:'', render: r => (
@@ -115,7 +124,7 @@ export default function PerformanceReview() {
           </div>
           <div className="form-group"><label className="form-label">Self Rating (1–5)</label>
             <input type="range" min={1} max={5} value={form.selfRating} onChange={e=>setForm(p=>({...p,selfRating:Number(e.target.value)}))} style={{ width:'100%' }} />
-            <p style={{ textAlign:'center', color:'var(--color-warning)', fontSize:16 }}>{STAR(form.selfRating)} ({form.selfRating}/5)</p>
+            <p style={{ textAlign:'center', color:'var(--color-warning)', fontSize:16 }}>{StarRating({ n: form.selfRating, color: 'var(--color-warning)' })} ({form.selfRating}/5)</p>
           </div>
           <div className="form-group"><label className="form-label">Key Strengths</label><textarea className="form-control" rows={2} value={form.strengths} onChange={e=>setForm(p=>({...p,strengths:e.target.value}))} placeholder="What are you excelling at?" /></div>
           <div className="form-group"><label className="form-label">Areas for Improvement</label><textarea className="form-control" rows={2} value={form.improvements} onChange={e=>setForm(p=>({...p,improvements:e.target.value}))} placeholder="Where can you grow?" /></div>
@@ -134,13 +143,13 @@ export default function PerformanceReview() {
         >
           <div style={{ marginBottom:16, padding:12, background:'var(--color-bg-surface-raised)', borderRadius:8, fontSize:13 }}>
             <strong>Employee self-assessment:</strong><br/>
-            Rating: {STAR(showReview.selfRating||0)}<br/>
+            Rating: {StarRating({ n: showReview.selfRating||0, color: 'var(--color-warning)' })}<br/>
             Strengths: {showReview.strengths||'—'}<br/>
             Improvements: {showReview.improvements||'—'}
           </div>
           <div className="form-group"><label className="form-label">Manager Rating (1–5)</label>
             <input type="range" min={1} max={5} value={revForm.managerRating} onChange={e=>setRevForm(p=>({...p,managerRating:Number(e.target.value),overallRating:Number(e.target.value)}))} style={{ width:'100%' }} />
-            <p style={{ textAlign:'center', color:'var(--color-primary)', fontSize:16 }}>{STAR(revForm.managerRating)} ({revForm.managerRating}/5)</p>
+            <p style={{ textAlign:'center', color:'var(--color-primary)', fontSize:16 }}>{StarRating({ n: revForm.managerRating, color: 'var(--color-primary)' })} ({revForm.managerRating}/5)</p>
           </div>
           <div className="form-group"><label className="form-label">Manager Comment</label><textarea className="form-control" rows={3} value={revForm.managerComment} onChange={e=>setRevForm(p=>({...p,managerComment:e.target.value}))} placeholder="Feedback for the employee…" /></div>
         </Modal>

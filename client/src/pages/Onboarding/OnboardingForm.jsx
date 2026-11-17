@@ -8,7 +8,6 @@ import Modal from '../../components/Modal';
 
 const PHASE_STEPS = ['pre_boarding','first_day','first_week','first_month','completed'];
 const PHASE_LABEL = { pre_boarding:'Pre-Boarding', first_day:'First Day', first_week:'First Week', first_month:'First Month', completed:'Completed' };
-const CAT_ICON = { documentation:'📄', it_setup:'💻', training:'📚', meeting:'🤝', policy:'📋', other:'📌' };
 
 export default function OnboardingForm() {
   const { isAdmin, isHR } = useAuth();
@@ -59,7 +58,7 @@ export default function OnboardingForm() {
     setSub(true);
     try {
       await initiate(form);
-      toast.success('Onboarding initiated successfully! 🚀');
+      toast.success('Onboarding initiated successfully!');
       setInitiate(false);
       setForm({ employeeId:'', startDate:'' });
       load();
@@ -70,7 +69,7 @@ export default function OnboardingForm() {
   const handleCompleteTask = async (taskId) => {
     try {
       await completeTask(taskId);
-      toast.success('Task marked complete! ✅');
+      toast.success('Task marked complete!');
       load();
     } catch (err) { toast.error(getError(err)); }
   };
@@ -99,7 +98,6 @@ export default function OnboardingForm() {
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
           <div>
             <span style={{ fontSize:13, fontWeight: task.completed ? 400 : 600, textDecoration: task.completed ? 'line-through' : 'none', color: task.completed ? 'var(--color-text-muted)' : 'var(--color-text)' }}>
-              {CAT_ICON[task.category]||'📌'} {task.title}
             </span>
             {task.description && <p style={{ fontSize:11, color:'var(--color-text-muted)', marginTop:2 }}>{task.description}</p>}
           </div>
@@ -109,7 +107,7 @@ export default function OnboardingForm() {
           </div>
         </div>
         {task.completed && task.completedAt && (
-          <p style={{ fontSize:11, color:'var(--success)', marginTop:4 }}>✅ Done {new Date(task.completedAt).toLocaleDateString('en-KE')}</p>
+          <p style={{ fontSize:11, color:'var(--success)', marginTop:4 }}> Done {new Date(task.completedAt).toLocaleDateString('en-KE')}</p>
         )}
       </div>
     </div>
@@ -119,7 +117,7 @@ export default function OnboardingForm() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Onboarding 🚀</h1>
+          <h1 className="page-title">Onboarding </h1>
           <p className="page-subtitle">New employee onboarding checklist and tracking</p>
         </div>
         {(isAdmin || isHR) && (
@@ -204,7 +202,7 @@ export default function OnboardingForm() {
                 )
                 : (
                   <div className="empty-state card card-body">
-                    <div className="empty-icon">🚀</div>
+                    <div className="empty-icon"></div>
                     <h3>No onboarding record</h3>
                     <p>Your HR team will set up your onboarding checklist. Check back soon!</p>
                   </div>
@@ -216,9 +214,9 @@ export default function OnboardingForm() {
               allOnboarding.length === 0
                 ? (
                   <div className="empty-state card card-body">
-                    <div className="empty-icon">🚀</div>
+                    <div className="empty-icon"></div>
                     <h3>No onboarding records</h3>
-                    <p>Click "Initiate Onboarding" to start a new employee's journey.</p>
+                    <p>Click &ldquo;...&rdquo; to start a new employee&apos;s journey.</p>
                   </div>
                 )
                 : (

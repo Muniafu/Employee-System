@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Pencil, Mail, Phone, MapPin } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { getEmployee, getMyProfile, updateEmployee } from '../../services/employeeService';
@@ -66,7 +67,7 @@ export default function EmployeeProfile() {
                   {saving ? <span className="spinner" style={{width:14,height:14,borderWidth:2}}/> : null} Save Changes
                 </button>
               </div>
-            : <button className="btn btn-outline" onClick={() => setEditing(true)}>✏️ Edit Profile</button>
+            : <button className="btn btn-outline" onClick={() => setEditing(true)} style={{ display:'inline-flex', alignItems:'center', gap:7 }}><Pencil size={14} /> Edit Profile</button>
         )}
       </div>
 
@@ -87,9 +88,9 @@ export default function EmployeeProfile() {
           </div>
           <div className="divider" />
           <div className="profile-contact">
-            <p>📧 {u.email}</p>
-            <p style={{ marginTop:4 }}>📱 {profile.phone||'—'}</p>
-            <p style={{ marginTop:4 }}>📍 {profile.address||'—'}</p>
+            <p style={{ display:'flex', alignItems:'center', gap:8 }}><Mail size={14} /> {u.email}</p>
+            <p style={{ marginTop:4, display:'flex', alignItems:'center', gap:8 }}><Phone size={14} /> {profile.phone||'—'}</p>
+            <p style={{ marginTop:4, display:'flex', alignItems:'center', gap:8 }}><MapPin size={14} /> {profile.address||'—'}</p>
           </div>
           <div className="divider" />
           <div style={{ fontSize:12, color:'var(--color-text-muted)', textAlign:'left' }}>

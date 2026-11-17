@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Users, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { getEmployees, deactivateEmployee } from '../../services/employeeService';
@@ -70,7 +71,9 @@ export default function EmployeeList() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Employees 👥</h1>
+          <h1 className="page-title" style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <Users size={24} /> Employees
+          </h1>
           <p className="page-subtitle">{employees.length} total team members</p>
         </div>
         {isAdmin && <button className="btn btn-primary" onClick={()=>setShowAdd(true)}>+ Add Employee</button>}
@@ -78,7 +81,7 @@ export default function EmployeeList() {
 
       <div className="toolbar">
         <div className="search-wrap search-grow">
-          <span className="search-icon">🔍</span>
+          <span className="search-icon"><Search size={14} /></span>
           <input className="form-control" placeholder="Search by name or email…" value={search} onChange={e=>setSearch(e.target.value)} />
         </div>
         <select className="form-control form-select filter-select" value={deptFilter} onChange={e=>setDeptFilter(e.target.value)}>

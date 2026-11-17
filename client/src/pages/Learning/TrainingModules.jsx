@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { BookOpen, Building2, Target, Award, Timer, CheckCircle2, LibraryBig } from 'lucide-react';
 import { getCourses, getMyCourses, createCourse, enroll, updateProgress } from '../../services/learningService';
 import { getError } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
@@ -54,7 +55,9 @@ export default function TrainingModules() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Learning & Development 📚</h1>
+          <h1 className="page-title" style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <BookOpen size={24} /> Learning & Development
+          </h1>
           <p className="page-subtitle">{courses.length} courses available</p>
         </div>
         {(isAdmin || isHR) && <button className="btn btn-primary" onClick={() => setCreate(true)}>+ Create Course</button>}
@@ -80,9 +83,9 @@ export default function TrainingModules() {
                   </div>
                   <h3 style={{ fontSize:14, fontWeight:700 }}>{c.title}</h3>
                   <div style={{ fontSize:12, color:'var(--color-text-muted)', display:'flex', gap:12 }}>
-                    <span>⏱ {c.duration}min</span>
-                    <span>🏢 {c.provider}</span>
-                    <span>🎯 Pass: {c.passingScore}%</span>
+                    <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}><Timer size={12} /> {c.duration}min</span>
+                    <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}><Building2 size={12} /> {c.provider}</span>
+                    <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}><Target size={12} /> Pass: {c.passingScore}%</span>
                   </div>
                   {enrolled && enr && (
                     <div>
@@ -91,7 +94,7 @@ export default function TrainingModules() {
                         <span>{enr.progress}%</span>
                       </div>
                       <div className="progress-bar"><div className="progress-fill" style={{ width:`${enr.progress}%` }} /></div>
-                      {enr.certificate && <div style={{ marginTop:6, fontSize:11, color:'var(--success)' }}>🏆 Certificate: {enr.certificate}</div>}
+                      {enr.certificate && <div style={{ marginTop:6, fontSize:11, color:'var(--success)', display:'flex', alignItems:'center', gap:4 }}><Award size={12} /> Certificate: {enr.certificate}</div>}
                     </div>
                   )}
                   <div style={{ marginTop:'auto', display:'flex', gap:8 }}>
@@ -99,13 +102,13 @@ export default function TrainingModules() {
                       ? <button className="btn btn-primary btn-sm" style={{ width:'100%' }} onClick={() => handleEnroll(c._id)}>Enroll</button>
                       : enr?.progress < 100
                         ? <button className="btn btn-outline btn-sm" style={{ flex:1 }} onClick={() => { const p = prompt('Update progress (0-100):', enr?.progress||0); if(p) handleProgress(c._id, p); }}>Update Progress</button>
-                        : <span className="badge badge-success" style={{ width:'100%', justifyContent:'center' }}>✅ Completed</span>
+                        : <span className="badge badge-success" style={{ width:'100%', justifyContent:'center' }}><CheckCircle2 size={12} /> Completed</span>
                     }
                   </div>
                 </div>
               );
             })}
-            {courses.length === 0 && <div className="empty-state card card-body" style={{ gridColumn:'1/-1' }}><div className="empty-icon">📚</div><h3>No courses yet</h3></div>}
+            {courses.length === 0 && <div className="empty-state card card-body" style={{ gridColumn:'1/-1' }}><div className="empty-icon"><BookOpen size={48} /></div><h3>No courses yet</h3></div>}
           </div>
         ) : (
           <div className="grid-auto">
@@ -120,10 +123,10 @@ export default function TrainingModules() {
                   </div>
                   <div className="progress-bar"><div className="progress-fill" style={{ width:`${c.myEnrollment?.progress||0}%` }} /></div>
                 </div>
-                {c.myEnrollment?.certificate && <div style={{ marginTop:8, fontSize:11, color:'var(--success)', wordBreak:'break-all' }}>🏆 {c.myEnrollment.certificate}</div>}
+                {c.myEnrollment?.certificate && <div style={{ marginTop:8, fontSize:11, color:'var(--success)', wordBreak:'break-all', display:'flex', alignItems:'center', gap:4 }}><Award size={12} /> {c.myEnrollment.certificate}</div>}
               </div>
             ))}
-            {myCourses.length === 0 && <div className="empty-state card card-body" style={{ gridColumn:'1/-1' }}><div className="empty-icon">📖</div><h3>Enroll in your first course!</h3></div>}
+            {myCourses.length === 0 && <div className="empty-state card card-body" style={{ gridColumn:'1/-1' }}><div className="empty-icon"><LibraryBig size={48} /></div><h3>Enroll in your first course!</h3></div>}
           </div>
         )
       )}

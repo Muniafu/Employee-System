@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
+import { Brain, Dumbbell, Wallet, Handshake, Phone, Sparkles, Mail } from 'lucide-react';
+
 import { getPrograms, createProgram, enroll, complete } from '../../services/wellnessService';
 import { getError } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
 import Modal from '../../components/Modal';
 
-const CAT_ICON  = { mental_health:'🧘', physical:'💪', financial:'💵', social:'🤝', eap:'☎️', other:'✨' };
+const CAT_ICON  = { mental_health:'brain', physical:'dumbbell', financial:'wallet', social:'handshake', eap:'phone', other:'sparkles' };
 const CAT_COLOR = { mental_health:'badge-info', physical:'badge-success', financial:'badge-warning', social:'badge-primary', eap:'badge-danger', other:'badge-neutral' };
 const TYPE_LABEL = { program:'Program', resource:'Resource', challenge:'Challenge', session:'Session' };
 
@@ -46,13 +48,13 @@ export default function WellnessDashboard() {
   useEffect(() => { load(); }, [load]);
 
   const handleEnroll = async (id) => {
-    try { await enroll(id); toast.success('Enrolled successfully! 🎉'); load(); }
+    try { await enroll(id); toast.success('Enrolled successfully!'); load(); }
     catch (err) { toast.error(getError(err)); }
   };
 
   const handleComplete = async (id) => {
     const feedback = prompt('Leave feedback (optional):') || '';
-    try { await complete(id, { feedback }); toast.success('Program marked complete! Well done 💪'); load(); }
+    try { await complete(id, { feedback }); toast.success('Program marked complete! Well done '); load(); }
     catch (err) { toast.error(getError(err)); }
   };
 
@@ -75,17 +77,17 @@ export default function WellnessDashboard() {
   const spotsLeft = (p) => Math.max(0, p.maxCapacity - (p.enrollments?.length || 0));
 
   const statsCards = [
-    { label: 'Total Programs', value: programs.length, icon: '💪', color: 'var(--color-primary)', bg: 'var(--color-info-bg)' },
-    { label: 'Mental Health', value: programs.filter(p=>p.category==='mental_health').length, icon: '🧘', color: 'var(--color-info)', bg: 'var(--color-info-light)' },
-    { label: 'Physical',      value: programs.filter(p=>p.category==='physical').length,      icon: '🏋️', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
-    { label: 'EAP Resources', value: programs.filter(p=>p.category==='eap').length,           icon: '☎️', color: 'var(--color-danger)', bg: 'var(--color-danger-bg)' },
+    { label: 'Total Programs', value: programs.length, icon: <Dumbbell />, color: 'var(--color-primary)', bg: 'var(--color-info-bg)' },
+    { label: 'Mental Health', value: programs.filter(p=>p.category==='mental_health').length, icon: <Brain />, color: 'var(--color-info)', bg: 'var(--color-info-light)' },
+    { label: 'Physical',      value: programs.filter(p=>p.category==='physical').length,      icon: <Dumbbell />, color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+    { label: 'EAP Resources', value: programs.filter(p=>p.category==='eap').length,           icon: <Phone />, color: 'var(--color-danger)', bg: 'var(--color-danger-bg)' },
   ];
 
   return (
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Wellness & Support 💪</h1>
+          <h1 className="page-title">Wellness Programs</h1>
           <p className="page-subtitle">Employee wellbeing programs and resources</p>
         </div>
         {(isAdmin || isHR) && (
@@ -125,7 +127,7 @@ export default function WellnessDashboard() {
         : programs.length === 0
           ? (
             <div className="empty-state card card-body">
-              <div className="empty-icon">💆</div>
+              <div className="empty-icon"><Sparkles /></div>
               <h3>No programs available</h3>
               <p>Check back soon or ask HR to add wellness programs.</p>
             </div>
@@ -175,10 +177,10 @@ export default function WellnessDashboard() {
                       )}
 
                       <div style={{ display:'flex', flexWrap:'wrap', gap:8, fontSize:12, color:'var(--color-text-muted)' }}>
-                        {p.provider && <span>🏢 {p.provider}</span>}
+                        {p.provider && <span> {p.provider}</span>}
                         <span>👥 {p.enrollments?.length||0}/{p.maxCapacity} enrolled</span>
                         {spots <= 5 && spots > 0 && <span style={{ color:'var(--color-warning)', fontWeight:600 }}>⚡ {spots} spots left</span>}
-                        {isFull && <span style={{ color:'var(--color-danger)', fontWeight:600 }}>🚫 Full</span>}
+                        {isFull && <span style={{ color:'var(--color-danger)', fontWeight:600 }}>Full</span>}
                       </div>
 
                       {/* Tags */}
@@ -194,10 +196,10 @@ export default function WellnessDashboard() {
                       {enrolled && enrData && (
                         <div style={{ padding:'8px 12px', borderRadius:8, background: enrData.status==='completed' ? 'var(--color-success-bg)' : 'var(--color-info-bg)', fontSize:12 }}>
                           {enrData.status === 'completed'
-                            ? <span style={{ color:'var(--success)', fontWeight:600 }}>✅ Completed {enrData.completedAt ? `on ${new Date(enrData.completedAt).toLocaleDateString('en-KE')}` : ''}</span>
+                            ? <span style={{ color:'var(--success)', fontWeight:600 }}> Completed {enrData.completedAt ? `on ${new Date(enrData.completedAt).toLocaleDateString('en-KE')}` : ''}</span>
                             : <span style={{ color:'var(--color-primary)', fontWeight:600 }}>✔ Enrolled {enrData.enrolledAt ? `since ${new Date(enrData.enrolledAt).toLocaleDateString('en-KE')}` : ''}</span>
                           }
-                          {enrData.feedback && <p style={{ color:'var(--color-text-muted)', marginTop:4 }}>"{enrData.feedback}"</p>}
+                          {enrData.feedback && <p style={{ color:'var(--color-text-muted)', marginTop:4 }}>&ldquo;{enrData.feedback}&rdquo;</p>}
                         </div>
                       )}
 
@@ -217,7 +219,7 @@ export default function WellnessDashboard() {
                           <button className="btn btn-outline btn-sm" style={{ flex:1 }} disabled>Program Full</button>
                         )}
                         {enrolled && enrData?.status === 'completed' && (
-                          <span className="badge badge-success" style={{ flex:1, justifyContent:'center', fontSize:12 }}>✅ Done</span>
+                          <span className="badge badge-success" style={{ flex:1, justifyContent:'center', fontSize:12 }}>Done</span>
                         )}
                       </div>
                     </div>
@@ -236,11 +238,11 @@ export default function WellnessDashboard() {
         </div>
         <div style={{ display:'flex', gap:12 }}>
           <div style={{ textAlign:'center', background:'rgba(255,255,255,.15)', borderRadius:10, padding:'10px 20px' }}>
-            <div style={{ fontWeight:800, fontSize:18 }}>☎️ 0800 720 000</div>
+            <div style={{ fontWeight:800, fontSize:18 }}><Phone /> 0800 720 000</div>
             <div style={{ fontSize:11, opacity:.8 }}>Free helpline</div>
           </div>
           <div style={{ textAlign:'center', background:'rgba(255,255,255,.15)', borderRadius:10, padding:'10px 20px' }}>
-            <div style={{ fontWeight:800, fontSize:18 }}>📧 hris@company.com</div>
+            <div style={{ fontWeight:800, fontSize:18 }}><Mail /> hris@company.com</div>
             <div style={{ fontSize:11, opacity:.8 }}>Email support</div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Banknote, ClipboardList, Zap } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
     getMyPayroll,
@@ -117,15 +118,17 @@ export default function PayrollDashboard() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Payroll 💰</h1>
+            <h1 className="page-title" style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <Banknote size={24} /> Payroll
+          </h1>
           <p className="page-subtitle">{isAdmin || isHR ? 'Process and manage payroll' : 'Your payslips and compensation history'}</p>
         </div>
         {(isAdmin || isHR) && (
           <div style={{ display:'flex', gap:10 }}>
             <button className="btn btn-outline" onClick={() => setShowPreview(false) || setShowPreview(true) || setPreview(null) || setPreviewForm({ employeeId:'', payrollPeriodId: '' })}>
-              📋 Preview
+                <ClipboardList size={16} style={{ marginRight:6 }} /> Preview
             </button>
-            <button className="btn btn-primary" onClick={() => setShowFinalize(true)}>⚡ Finalize Payroll</button>
+            <button className="btn btn-primary" onClick={() => setShowFinalize(true)}><Zap size={16}/> Finalize Payroll</button>
           </div>
         )}
       </div>

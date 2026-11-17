@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { HeartHandshake, CircleHelp, Inbox, Star, X } from 'lucide-react';
 import { getSurveys, createSurvey, submitResponse, getResults } from '../../services/engagementService';
 import { getError } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
@@ -39,7 +40,7 @@ export default function EngagementSurvey() {
     setSub(true);
     try {
       await submitResponse(activeSurvey._id, { answers, npsScore: nps, anonymous: false });
-      toast.success('Response submitted! Thank you 🙏');
+      toast.success('Response submitted! Thank you.');
       setActive(null);
       load();
     } catch(err) { toast.error(getError(err)); }
@@ -61,7 +62,9 @@ export default function EngagementSurvey() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Engagement 🧠</h1>
+          <h1 className="page-title" style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <HeartHandshake size={24} /> Engagement
+          </h1>
           <p className="page-subtitle">Pulse surveys and team recognition</p>
         </div>
         {(isAdmin || isHR) && <button className="btn btn-primary" onClick={() => setCreate(true)}>+ Create Survey</button>}
@@ -78,9 +81,9 @@ export default function EngagementSurvey() {
               <h3 style={{ fontSize:14, fontWeight:700 }}>{s.title}</h3>
               {s.description && <p style={{ fontSize:12, color:'var(--color-text-muted)' }}>{s.description}</p>}
               <div style={{ fontSize:11, color:'var(--color-text-muted)', display:'flex', gap:12 }}>
-                <span>❓ {s.questions?.length||0} questions</span>
-                <span>📬 {s.responses?.length||0} responses</span>
-                {s.avgNps > 0 && <span>⭐ NPS: {Number(s.avgNps).toFixed(1)}</span>}
+                <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}><CircleHelp size={12} /> {s.questions?.length||0} questions</span>
+                <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}><Inbox size={12} /> {s.responses?.length||0} responses</span>
+                {s.avgNps > 0 && <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}><Star size={12} /> NPS: {Number(s.avgNps).toFixed(1)}</span>}
               </div>
               <div style={{ display:'flex', gap:8, marginTop:'auto' }}>
                 {s.isActive && (
@@ -96,7 +99,7 @@ export default function EngagementSurvey() {
               </div>
             </div>
           ))}
-          {surveys.length === 0 && <div className="empty-state card card-body" style={{ gridColumn:'1/-1' }}><div className="empty-icon">🧠</div><h3>No surveys yet</h3></div>}
+          {surveys.length === 0 && <div className="empty-state card card-body" style={{ gridColumn:'1/-1' }}><div className="empty-icon"><HeartHandshake size={48} /></div><h3>No surveys yet</h3></div>}
         </div>
       )}
 
@@ -191,7 +194,7 @@ export default function EngagementSurvey() {
                 <select className="form-control form-select" value={q.type} onChange={e=>setQ(i,'type',e.target.value)} style={{ width:110 }}>
                   {['rating','text','boolean','choice'].map(t=><option key={t} value={t}>{t}</option>)}
                 </select>
-                {form.questions.length > 1 && <button type="button" className="btn btn-sm btn-ghost" onClick={() => rmQ(i)} style={{ color:'var(--color-danger)' }}>✕</button>}
+                {form.questions.length > 1 && <button type="button" className="btn btn-sm btn-ghost" onClick={() => rmQ(i)} style={{ color:'var(--color-danger)' }} aria-label="Remove question"><X size={14} /></button>}
               </div>
             ))}
           </div>

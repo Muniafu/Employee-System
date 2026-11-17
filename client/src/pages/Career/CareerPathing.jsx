@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { FolderOpen, Star, CalendarDays, CheckCircle2, Check, X, ArrowRight } from 'lucide-react';
 import { createPath, getPaths, completeMilestone, flagSuccession } from '../../services/careerService';
 import { getError } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
@@ -36,7 +37,7 @@ export default function CareerPathing() {
     setSub(true);
     try {
       await createPath(form);
-      toast.success('Career path created! 🚀');
+      toast.success('Career path created!');
       setCreate(false);
       resetForm();
       load();
@@ -45,13 +46,13 @@ export default function CareerPathing() {
   };
 
   const handleCompleteMilestone = async (pathId, milestoneId) => {
-    try { await completeMilestone(pathId, milestoneId); toast.success('Milestone completed! 🎯'); load(); }
+    try { await completeMilestone(pathId, milestoneId); toast.success('Milestone completed!'); load(); }
     catch (err) { toast.error(getError(err)); }
   };
 
   const handleFlagSuccession = async (pathId) => {
     if (!confirm('Flag this employee as a succession candidate?')) return;
-    try { await flagSuccession(pathId); toast.success('Flagged as succession candidate ⭐'); load(); }
+    try { await flagSuccession(pathId); toast.success('Flagged as succession candidate'); load(); }
     catch (err) { toast.error(getError(err)); }
   };
 
@@ -80,7 +81,9 @@ export default function CareerPathing() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Career Pathing 🗂️</h1>
+          <h1 className="page-title" style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <FolderOpen size={24} /> Career Pathing
+          </h1>
           <p className="page-subtitle">Growth plans, skills and succession planning</p>
         </div>
         <button className="btn btn-primary" onClick={() => setCreate(true)}>+ Create Career Path</button>
@@ -91,7 +94,7 @@ export default function CareerPathing() {
         : paths.length === 0
           ? (
             <div className="empty-state card card-body">
-              <div className="empty-icon">🗂️</div>
+              <div className="empty-icon"><FolderOpen size={48} /></div>
               <h3>No career paths yet</h3>
               <p>Create your first career path to start tracking your professional growth.</p>
               <button className="btn btn-primary" style={{ marginTop:16 }} onClick={() => setCreate(true)}>Get Started</button>
@@ -113,16 +116,16 @@ export default function CareerPathing() {
                         <div>
                           <div style={{ fontWeight:700, fontSize:14 }}>{empName || 'Me'}</div>
                           <div style={{ fontSize:12, color:'var(--color-text-muted)' }}>
-                            {path.currentRole} <span style={{ color:'var(--color-primary)' }}>→</span> {path.targetRole}
+                            {path.currentRole} <ArrowRight size={12} style={{ display:'inline-block', verticalAlign:'middle', color:'var(--color-primary)' }} /> {path.targetRole}
                             <span style={{ marginLeft:8 }}>· {path.timeline}</span>
                           </div>
                         </div>
                       </div>
                       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                        {path.successionFlag && <span className="badge badge-warning">⭐ Succession</span>}
+                        {path.successionFlag && <span className="badge badge-warning" style={{ display:'inline-flex', alignItems:'center', gap:4 }}><Star size={11} /> Succession</span>}
                         <span className={`badge ${STATUS_COLOR[path.status]||'badge-neutral'}`} style={{ textTransform:'capitalize' }}>{path.status}</span>
                         {(isAdmin || isHR) && !path.successionFlag && (
-                          <button className="btn btn-sm btn-outline" onClick={() => handleFlagSuccession(path._id)} title="Flag as succession candidate">⭐</button>
+                          <button className="btn btn-sm btn-outline" onClick={() => handleFlagSuccession(path._id)} title="Flag as succession candidate" aria-label="Flag as succession candidate"><Star size={13} /></button>
                         )}
                         <button className="btn btn-sm btn-ghost" onClick={() => setSelected(selected?._id===path._id ? null : path)}>
                           {selected?._id===path._id ? '▲' : '▼'}
@@ -155,13 +158,13 @@ export default function CareerPathing() {
                                       onClick={() => !m.completed && handleCompleteMilestone(path._id, m._id)}
                                       style={{ marginTop:2, width:20, height:20, borderRadius:'50%', border:`2px solid ${m.completed?'var(--color-success)':'var(--color-border-2)'}`, background: m.completed?'var(--color-success)':'transparent', color:'#fff', fontSize:11, display:'grid', placeItems:'center', flexShrink:0, cursor: m.completed?'default':'pointer' }}
                                     >
-                                      {m.completed ? '✓' : ''}
+                                      {m.completed && <Check size={12} strokeWidth={3} />}
                                     </button>
                                     <div style={{ flex:1 }}>
                                       <div style={{ fontSize:13, fontWeight:m.completed?400:600, textDecoration:m.completed?'line-through':'none', color:m.completed?'var(--color-text-muted)':'var(--color-text)' }}>{m.title}</div>
                                       {m.description && <div style={{ fontSize:11, color:'var(--color-text-muted)' }}>{m.description}</div>}
-                                      {m.targetDate && <div style={{ fontSize:11, color:'var(--color-text-muted)' }}>🗓 {new Date(m.targetDate).toLocaleDateString('en-KE')}</div>}
-                                      {m.completed && m.completedAt && <div style={{ fontSize:11, color:'var(--color-success)' }}>✅ Done {new Date(m.completedAt).toLocaleDateString('en-KE')}</div>}
+                                      {m.targetDate && <div style={{ fontSize:11, color:'var(--color-text-muted)', display:'flex', alignItems:'center', gap:4 }}><CalendarDays size={11} /> {new Date(m.targetDate).toLocaleDateString('en-KE')}</div>}
+                                      {m.completed && m.completedAt && <div style={{ fontSize:11, color:'var(--color-success)', display:'flex', alignItems:'center', gap:4 }}><CheckCircle2 size={11} /> Done {new Date(m.completedAt).toLocaleDateString('en-KE')}</div>}
                                     </div>
                                   </div>
                                 ))
@@ -181,7 +184,7 @@ export default function CareerPathing() {
                                     </div>
                                     <div style={{ display:'flex', gap:6 }}>
                                       <span className="badge badge-neutral" style={{ textTransform:'capitalize' }}>{s.level}</span>
-                                      {s.acquired && <span className="badge badge-success">✓ Acquired</span>}
+                                      {s.acquired && <span className="badge badge-success" style={{ display:'inline-flex', alignItems:'center', gap:3 }}><Check size={11} /> Acquired</span>}
                                     </div>
                                   </div>
                                 ))
@@ -191,7 +194,7 @@ export default function CareerPathing() {
                         </div>
                         {path.notes && (
                           <div style={{ marginTop:16, padding:'10px 14px', background:'var(--color-bg-surface-raised)', borderRadius:8, fontSize:13, color:'var(--color-text-muted)', fontStyle:'italic' }}>
-                            "{path.notes}"
+                            &ldquo;{path.notes}&rdquo;
                           </div>
                         )}
                       </div>
@@ -246,7 +249,7 @@ export default function CareerPathing() {
                 <label style={{ display:'flex', alignItems:'center', gap:4, fontSize:12, whiteSpace:'nowrap', cursor:'pointer' }}>
                   <input type="checkbox" checked={s.acquired} onChange={e => setSkill(i,'acquired',e.target.checked)} /> Acquired
                 </label>
-                {form.skills.length > 1 && <button type="button" className="btn btn-sm btn-ghost" onClick={() => rmSkill(i)} style={{ color:'var(--color-danger)' }}>✕</button>}
+                {form.skills.length > 1 && <button type="button" className="btn btn-sm btn-ghost" onClick={() => rmSkill(i)} style={{ color:'var(--color-danger)' }} aria-label="Remove skill"><X size={14} /></button>}
               </div>
             ))}
           </div>
@@ -262,7 +265,7 @@ export default function CareerPathing() {
                 <input className="form-control" placeholder="Title" value={m.title} onChange={e => setMilestone(i,'title',e.target.value)} />
                 <input className="form-control" placeholder="Description" value={m.description} onChange={e => setMilestone(i,'description',e.target.value)} />
                 <input className="form-control" type="date" value={m.targetDate} onChange={e => setMilestone(i,'targetDate',e.target.value)} style={{ width:150 }} />
-                {form.milestones.length > 1 && <button type="button" className="btn btn-sm btn-ghost" onClick={() => rmMilestone(i)} style={{ color:'var(--color-danger)' }}>✕</button>}
+                {form.milestones.length > 1 && <button type="button" className="btn btn-sm btn-ghost" onClick={() => rmMilestone(i)} style={{ color:'var(--color-danger)' }} aria-label="Remove milestone"><X size={14} /></button>}
               </div>
             ))}
           </div>

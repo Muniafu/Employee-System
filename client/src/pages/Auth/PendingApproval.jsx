@@ -29,7 +29,7 @@ export default function PendingApproval() {
                     </p>
 
                     <p>
-                        You'll be able to sign in once your
+                        You&apos;ll be able to sign in once your
                         account has been approved.
                     </p>
 

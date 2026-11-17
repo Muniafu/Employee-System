@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { ClipboardList, BookOpen, Award, Search, PenLine, FileText, BarChart3, CheckCircle2, PartyPopper, TriangleAlert } from 'lucide-react';
 import { getItems, acknowledge, getStatus, createItem } from '../../services/complianceService';
 import { getError } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
 import Modal from '../../components/Modal';
 
-const TYPE_ICON  = { policy:'📋', training:'📚', certification:'🏆', audit:'🔍', declaration:'✍️' };
+const TYPE_ICON  = { policy: ClipboardList, training: BookOpen, certification: Award, audit: Search, declaration: PenLine };
+const TypeIcon = ({ type, size = 24 }) => {
+  const Icon = TYPE_ICON[type] || FileText;
+  return <Icon size={size} style={{ flexShrink: 0 }} />;
+};
 const TYPE_COLOR = { policy:'badge-primary', training:'badge-info', certification:'badge-success', audit:'badge-warning', declaration:'badge-danger' };
 
 export default function PolicyAcknowledgment() {
@@ -45,7 +50,7 @@ export default function PolicyAcknowledgment() {
     setSub(true);
     try {
       await acknowledge(selected._id, { signature });
-      toast.success('Policy acknowledged successfully! ✅');
+      toast.success('Policy acknowledged successfully!');
       setSelected(null);
       setSignature('');
       load();
@@ -91,7 +96,9 @@ export default function PolicyAcknowledgment() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Compliance 📋</h1>
+          <h1 className="page-title" style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <ClipboardList size={24} /> Compliance
+          </h1>
           <p className="page-subtitle">Policy acknowledgments and compliance tracking</p>
         </div>
         {(isAdmin || isHR) && (
@@ -115,7 +122,9 @@ export default function PolicyAcknowledgment() {
             <div className="progress-fill" style={{ width:`${items.length > 0 ? (doneCount/items.length)*100 : 0}%`, background: doneCount===items.length ? 'var(--color-success)' : 'var(--color-primary)' }} />
           </div>
           {doneCount === items.length && items.length > 0 && (
-            <p style={{ marginTop:10, fontSize:13, color:'var(--color-success)', fontWeight:600 }}>🎉 Fully compliant — all policies acknowledged!</p>
+            <p style={{ marginTop:10, fontSize:13, color:'var(--color-success)', fontWeight:600, display:'flex', alignItems:'center', gap:6 }}>
+              <PartyPopper size={14} /> Fully compliant — all policies acknowledged!
+            </p>
           )}
         </div>
       )}
@@ -137,7 +146,7 @@ export default function PolicyAcknowledgment() {
                     return (
                       <div key={item._id} className="card card-body" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap', borderLeft:`4px solid ${acked ? 'var(--color-success)' : 'var(--color-danger)'}` }}>
                         <div style={{ display:'flex', alignItems:'center', gap:14, flex:1, minWidth:0 }}>
-                          <div style={{ fontSize:28, flexShrink:0 }}>{TYPE_ICON[item.type]||'📄'}</div>
+                          <div style={{ flexShrink:0, color:'var(--color-primary)' }}><TypeIcon type={item.type} size={28} /></div>
                           <div style={{ minWidth:0 }}>
                             <div style={{ fontWeight:700, fontSize:14, marginBottom:2 }}>{item.title}</div>
                             <div style={{ fontSize:12, color:'var(--color-text-muted)', display:'flex', flexWrap:'wrap', gap:10 }}>
@@ -150,14 +159,14 @@ export default function PolicyAcknowledgment() {
                         </div>
                         <div style={{ display:'flex', gap:8, flexShrink:0 }}>
                           {(isAdmin || isHR) && (
-                            <button className="btn btn-sm btn-outline" onClick={() => handleViewStatus(item)}>
-                              📊 Status
+                            <button className="btn btn-sm btn-outline" onClick={() => handleViewStatus(item)} style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
+                              <BarChart3 size={13} /> Status
                             </button>
                           )}
                           {acked
-                            ? <span className="badge badge-success" style={{ padding:'6px 14px', fontSize:12 }}>✅ Acknowledged</span>
-                            : <button className="btn btn-sm btn-primary" onClick={() => { setSelected(item); setSignature(`${user?.firstName} ${user?.lastName}`); }}>
-                                ✍️ Acknowledge
+                            ? <span className="badge badge-success" style={{ padding:'6px 14px', fontSize:12, display:'inline-flex', alignItems:'center', gap:5 }}><CheckCircle2 size={12} /> Acknowledged</span>
+                            : <button className="btn btn-sm btn-primary" onClick={() => { setSelected(item); setSignature(`${user?.firstName} ${user?.lastName}`); }} style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
+                                <PenLine size={13} /> Acknowledge
                               </button>
                           }
                         </div>
@@ -178,17 +187,19 @@ export default function PolicyAcknowledgment() {
                     return (
                       <div key={item._id} className="card card-body" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap', opacity: acked ? .75 : 1 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:14, flex:1 }}>
-                          <div style={{ fontSize:24 }}>{TYPE_ICON[item.type]||'📄'}</div>
+                          <div style={{ color:'var(--color-primary)' }}><TypeIcon type={item.type} size={24} /></div>
                           <div>
                             <div style={{ fontWeight:600, fontSize:13 }}>{item.title}</div>
                             <div style={{ fontSize:11, color:'var(--color-text-muted)' }}>v{item.version} · {item.type}</div>
                           </div>
                         </div>
                         <div style={{ display:'flex', gap:8 }}>
-                          {(isAdmin || isHR) && <button className="btn btn-sm btn-ghost" onClick={() => handleViewStatus(item)}>📊</button>}
+                          {(isAdmin || isHR) && <button className="btn btn-sm btn-ghost" onClick={() => handleViewStatus(item)} aria-label="View status"><BarChart3 size={14} /></button>}
                           {acked
-                            ? <span className="badge badge-success">✅ Done</span>
-                            : <button className="btn btn-sm btn-outline" onClick={() => { setSelected(item); setSignature(`${user?.firstName} ${user?.lastName}`); }}>Acknowledge</button>
+                            ? <span className="badge badge-success" style={{ display:'inline-flex', alignItems:'center', gap:4 }}><CheckCircle2 size={11} /> Done</span>
+                            : <button className="btn btn-sm btn-outline" onClick={() => { setSelected(item); setSignature(`${user?.firstName} ${user?.lastName}`); }} aria-label="Acknowledge">
+                                <PenLine size={13} /> Acknowledge
+                              </button>
                           }
                         </div>
                       </div>
@@ -200,7 +211,7 @@ export default function PolicyAcknowledgment() {
 
             {items.length === 0 && (
               <div className="empty-state card card-body">
-                <div className="empty-icon">📋</div>
+                <div className="empty-icon"><ClipboardList size={48} /></div>
                 <h3>No compliance policies yet</h3>
                 <p>HR will add policies here for team acknowledgment.</p>
               </div>
@@ -215,7 +226,7 @@ export default function PolicyAcknowledgment() {
           footer={<>
             <button className="btn btn-outline" onClick={() => { setSelected(null); setSignature(''); }}>Cancel</button>
             <button className="btn btn-primary" onClick={handleAcknowledge} disabled={submitting}>
-              {submitting ? <span className="spinner" style={{ width:14, height:14, borderWidth:2 }} /> : '✍️'}
+              {submitting ? <span className="spinner" style={{ width:14, height:14, borderWidth:2 }} /> : <PenLine size={14} />}
               {' '}Sign & Acknowledge
             </button>
           </>}
@@ -224,7 +235,7 @@ export default function PolicyAcknowledgment() {
             {selected.content || selected.description || 'Please read and acknowledge this policy.'}
           </div>
           <div style={{ padding:'10px 14px', background:'var(--color-warning-bg)', borderRadius:8, fontSize:12, color:'var(--color-warning)', marginBottom:16 }}>
-            ⚠️ By signing, you confirm you have read and understood this policy. This action is logged and time-stamped.
+            <span style={{ display:'inline-flex', alignItems:'flex-start', gap:6 }}><TriangleAlert size={14} style={{ flexShrink:0, marginTop:1 }} /> By signing, you confirm you have read and understood this policy. This action is logged and time-stamped.</span>
           </div>
           <div className="form-group">
             <label className="form-label">Full Name (Digital Signature) *</label>
