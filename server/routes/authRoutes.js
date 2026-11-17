@@ -50,7 +50,7 @@ router.put('/change-password', auth, changePassword);
 router.post(
   '/register-admin',
   auth,
-  authorize('admin', 'superuser'),
+  authorize('admin'),
   registerAdmin
 );
 

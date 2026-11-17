@@ -3,7 +3,7 @@ const c = require('../controllers/analyticsController');
 const auth = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 
-router.use(auth, authorize('admin', 'superuser', 'hr'));
+router.use(auth, authorize('admin', 'hr'));
 
 router.get('/dashboard', c.dashboard);
 router.get('/attendance', c.attendance);

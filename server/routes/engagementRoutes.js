@@ -5,10 +5,10 @@ const { authorize } = require('../middleware/roleMiddleware');
 
 router.use(auth);
 
-router.post('/', authorize('admin', 'superuser', 'hr'), c.create);
+router.post('/', authorize('admin', 'hr'), c.create);
 router.get('/', c.getAll);
 router.get('/:id', c.getOne);
 router.post('/:id/submit', c.submit);
-router.get('/:id/results', authorize('admin', 'superuser', 'hr'), c.getResults);
+router.get('/:id/results', authorize('admin', 'hr'), c.getResults);
 
 module.exports = router;

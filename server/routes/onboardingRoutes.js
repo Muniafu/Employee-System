@@ -5,21 +5,21 @@ const { authorize } = require('../middleware/roleMiddleware');
 
 router.use(auth);
 
-router.post('/', authorize('admin', 'superuser', 'hr'), c.initiate);
+router.post('/', authorize('admin', 'hr'), c.initiate);
 router.get('/me', c.getMyOnboarding);
-router.get('/all', authorize('admin', 'superuser', 'hr'), c.getAll);
+router.get('/all', authorize('admin', 'hr'), c.getAll);
 
 // Self-service: employee completing their own assigned tasks
 router.patch(
   '/tasks/:taskId/complete',
-  authorize('admin', 'superuser', 'hr', 'it', 'manager', 'employee'),
+  authorize('admin', 'hr', 'manager', 'employee'),
   c.completeTask
 );
 
 // HR/IT/manager completing tasks on someone else's onboarding record
 router.patch(
   '/:employeeId/tasks/:taskId/complete',
-  authorize('admin', 'superuser', 'hr', 'it', 'manager'),
+  authorize('admin', 'hr', 'manager'),
   c.completeTask
 );
 

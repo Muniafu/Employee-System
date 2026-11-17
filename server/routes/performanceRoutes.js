@@ -9,7 +9,7 @@ router.post('/', c.create);
 router.get('/', c.getAll);
 router.get('/:id', c.getOne);
 router.patch('/:id/submit', c.submit);
-router.patch('/:id/review', authorize('admin', 'superuser', 'hr', 'manager'), c.review);
+router.patch('/:id/review', authorize('admin', 'hr', 'manager'), c.review);
 router.put('/:id/goals', c.updateGoals);
 
 module.exports = router;

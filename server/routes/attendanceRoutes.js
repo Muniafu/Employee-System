@@ -53,7 +53,6 @@ router.get(
   '/all',
   authorize(
     'admin',
-    'superuser',
     'hr',
     'manager'
   ),

@@ -16,7 +16,6 @@ router.get(
   '/',
   authorize(
     'admin',
-    'superuser',
     'hr'
   ),
   controller.getSettings
@@ -26,7 +25,6 @@ router.post(
   '/',
   authorize(
     'admin',
-    'superuser'
   ),
   controller.createSettings
 );
@@ -35,7 +33,6 @@ router.put(
   '/:id',
   authorize(
     'admin',
-    'superuser'
   ),
   controller.updateSettings
 );
@@ -44,7 +41,6 @@ router.patch(
   '/:id/activate',
   authorize(
     'admin',
-    'superuser'
   ),
   controller.activateSettings
 );
@@ -53,14 +49,13 @@ router.patch(
   '/:id/deactivate',
   authorize(
     'admin',
-    'superuser'
   ),
   controller.deactivateSettings
 );
 
 router.delete(
   '/:id',
-  authorize('superuser'),
+  authorize('admin'),
   controller.deleteSettings
 );
 
