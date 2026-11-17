@@ -208,7 +208,7 @@ export default function App() {
             <Route
                 path="/employees"
                 element={
-                    <RequireAuth roles={['admin', 'superuser', 'hr', 'manager']}>
+                    <RequireAuth roles={['admin', 'hr', 'manager']}>
                         <AppLayout>
                             <EmployeeList />
                         </AppLayout>
@@ -219,7 +219,7 @@ export default function App() {
             <Route
                 path="/employees/:id"
                 element={
-                    <RequireAuth roles={['admin', 'superuser', 'hr', 'manager']}>
+                    <RequireAuth roles={['admin', 'hr', 'manager']}>
                         <AppLayout>
                             <EmployeeProfile />
                         </AppLayout>
@@ -230,7 +230,7 @@ export default function App() {
             <Route
                 path="/analytics"
                 element={
-                    <RequireAuth roles={['admin', 'superuser', 'hr']}>
+                    <RequireAuth roles={['admin', 'hr']}>
                         <AppLayout>
                             <HRAnalytics />
                         </AppLayout>
@@ -241,7 +241,7 @@ export default function App() {
             <Route
                 path="/admin"
                 element={
-                    <RequireAuth roles={['admin', 'superuser']}>
+                    <RequireAuth roles={['admin']}>
                         <AppLayout>
                             <AdminPanel />
                         </AppLayout>

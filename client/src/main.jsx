@@ -19,7 +19,6 @@ import App from './App.jsx';
 
 import AuthProvider from './context/AuthProvider.jsx';
 import ThemeProvider from './context/ThemeProvider.jsx';
-import EmployeeProvider from './context/EmployeeProvider.jsx';
 import NotificationProvider from './context/NotificationContext';
 
 ReactDOM.createRoot(
@@ -28,7 +27,6 @@ ReactDOM.createRoot(
   <BrowserRouter>
     <ThemeProvider>
       <AuthProvider>
-        <EmployeeProvider>
           <NotificationProvider>
             <App />
 
@@ -41,7 +39,6 @@ ReactDOM.createRoot(
               pauseOnHover
             />
           </NotificationProvider>
-        </EmployeeProvider>
       </AuthProvider>
     </ThemeProvider>
   </BrowserRouter>
