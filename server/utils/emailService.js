@@ -20,7 +20,7 @@ transporter.verify((error) => {
   if (error) {
     logger.error(`SMTP Verification Failed: ${error.message}`);
   } else {
-    logger.info('✅ SMTP Server Ready');
+    logger.info('SMTP Server Ready');
   }
 });
 
@@ -32,7 +32,7 @@ const sendEmail = async ({
 }) => {
   try {
     logger.info(
-      `📧 Attempting email -> ${to} | Subject: ${subject}`
+      `Attempting email -> ${to} | Subject: ${subject}`
     );
 
     const info = await transporter.sendMail({
@@ -44,7 +44,7 @@ const sendEmail = async ({
     });
 
     logger.info(
-      `✅ Email Sent: ${info.messageId}`
+      `Email Sent: ${info.messageId}`
     );
 
     return {
@@ -53,7 +53,7 @@ const sendEmail = async ({
     };
   } catch (err) {
     logger.error(
-      `❌ Email Failed: ${err.message}`
+      `Email Failed: ${err.message}`
     );
 
     return {
@@ -65,7 +65,7 @@ const sendEmail = async ({
 
 const templates = {
   leaveApproved: (name, dates) => ({
-    subject: 'Leave Request Approved ✅',
+    subject: 'Leave Request Approved ',
     html: `
       <h2>Leave Approved</h2>
       <p>Hello ${name},</p>
